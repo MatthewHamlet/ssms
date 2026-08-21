@@ -13,7 +13,6 @@ public class SurveyController : Controller
         _context = context;
     }
 
-    // GET: /Survey  -> daftar semua form aktif
     public async Task<IActionResult> Index()
     {
         var forms = await _context.SurveyForms
@@ -23,7 +22,6 @@ public class SurveyController : Controller
         return View(forms);
     }
 
-    // GET: /Survey/Fill/5  -> nampilin form (versi published terbaru) berdasarkan FormId
     public async Task<IActionResult> Fill(long id)
     {
         var version = await _context.SurveyFormVersions

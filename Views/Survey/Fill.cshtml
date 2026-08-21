@@ -1,158 +1,8 @@
 @model SurveyFormApp.Models.SurveyFormVersion
 
-<style>
-    .wizard-progress-bar {
-        height: 6px;
-        background: #e9ecef;
-        border-radius: 3px;
-        margin-bottom: 8px;
-        overflow: hidden;
-    }
-    .wizard-progress-fill {
-        height: 100%;
-        background: #198754;
-        transition: width 0.25s ease;
-    }
-    .wizard-step-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        margin-bottom: 20px;
-    }
-    .wizard-step {
-        display: none;
-    }
-    .wizard-step.active {
-        display: block;
-    }
-    .wizard-nav-dots {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 20px;
-    }
-    .wizard-nav-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #dee2e6;
-        cursor: pointer;
-    }
-    .wizard-nav-dot.active {
-        background: #198754;
-        width: 14px;
-        height: 14px;
-    }
-    .wizard-nav-dot.visited {
-        background: #75c9a3;
-    }
-</style>
-
-<h1>Isi Survey</h1>
-
-<form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
-    <input type="hidden" name="formVersionId" value="@Model.Id" />
-
-    <div class="wizard-progress-bar">
-        <div class="wizard-progress-fill" id="progressFill" style="width: 0%;"></div>
-    </div>
-    <div class="wizard-step-label" id="stepLabel">Bagian 1</div>
-    <div class="wizard-nav-dots" id="navDots"></div>
-
-    @{
-        var sectionsOrdered = Model.SurveySections.OrderBy(s => s.OrderNo).ToList();
-        var stepIndex = 0;
-    }
-
-    @foreach (var sec in sectionsOrdered)
-    {
-        <div class="card mb-4 wizard-step @(stepIndex == 0 ? "active" : "")" data-step="@stepIndex">
-            <div class="card-header">
-                <strong>@sec.SectionTitle</strong>
-            </div>
-            <div class="card-body">
-                @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
-                {
-                    <div class="mb-3 question-wrapper" data-question-id="@q.Id">
-                        <label class="form-label">
-                            @q.QuestionText
-                            @if (q.IsRequired) { <span class="text-danger">*</span> }
-                        </label>
-
-                        @{
-                            var fieldName = $"answers[{q.Id}]";
-                            var qType = q.QuestionType?.ToLower() ?? "text";
-                        }
-
-                        @if (qType == "textarea")
-                        {
-                            <textarea name="@fieldName" class="form-control"
-                                      placeholder="@q.Placeholder" maxlength="@q.MaxLength"
-                                      required="@q.IsRequired"></textarea>
-                        }
-                        else if (qType == "number")
-                        {
-                            <input type="number" name="@fieldName" class="form-control"
-                                   placeholder="@q.Placeholder"
-                                   min="@q.MinValue" max="@q.MaxValue"
-                                   required="@q.IsRequired" />
-                        }
-                        else if (qType == "date")
-                        {
-                            <input type="date" name="@fieldName" class="form-control"
-                                   required="@q.IsRequired" />
-                        }
-                        else if (qType == "dropdown")
-                        {
-                            <select name="@fieldName" class="form-select" required="@q.IsRequired">
-                                <option value="">-- Pilih --</option>
-                                @foreach (var opt in q.SurveyQuestionOptions.OrderBy(o => o.OrderNo))
-                                {
-                                    <option value="@opt.OptionValue">@opt.OptionLabel</option>
-                                }
-                            </select>
-                        }
-                        else if (qType == "boolean")
-                        {
-                            <select name="@fieldName" class="form-select" required="@q.IsRequired">
-                                <option value="">-- Pilih --</option>
-                                <option value="true">Ya</option>
-                                <option value="false">Tidak</option>
-                            </select>
-                        }
-                        else if (qType == "photo")
-                        {
-                            <input type="file" name="@fieldName" class="form-control" accept="image/*"
-                                   required="@q.IsRequired" />
-                            <div class="form-text text-warning">
-                                Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
-                            </div>
-                        }
-                        else
-                        {
-                            <input type="text" name="@fieldName" class="form-control"
-                                   placeholder="@q.Placeholder" maxlength="@q.MaxLength"
-                                   required="@q.IsRequired" />
-                        }
-
-                        @if (!string.IsNullOrEmpty(q.HelpText))
-                        {
-                            <div class="form-text">@q.HelpText</div>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-        stepIndex++;
-    }
-
-    <div class="d-flex justify-content-between mt-4">
-        <button type="button" id="btnPrev" class="btn btn-outline-secondary" disabled>&laquo; Sebelumnya</button>
-        <button type="button" id="btnNext" class="btn btn-primary">Selanjutnya &raquo;</button>
-        <button type="submit" id="btnSubmit" class="btn btn-success" style="display: none;">Submit Survey</button>
-    </div>
-</form>
-
 @{
+    var sectionsOrdered = Model.SurveySections.OrderBy(s => s.OrderNo).ToList();
+
     var allQuestions = Model.SurveySections.SelectMany(s => s.SurveyQuestions).ToList();
     var rules = allQuestions
         .SelectMany(q => q.SurveyQuestionRuleQuestions.Select(r => new
@@ -164,16 +14,373 @@
             action = r.Action
         }))
         .ToList();
+
     var rulesJson = System.Text.Json.JsonSerializer.Serialize(rules);
+    var sectionTitlesJson = System.Text.Json.JsonSerializer.Serialize(sectionsOrdered.Select(s => s.SectionTitle));
 }
 
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    html {
+      overflow-x:hidden;
+    }
+
+    .sv-page {
+        --page-bg:#f0eff4;
+        --card-bg:#ffffff;
+        --border:#e5e7eb;
+        --purple:#6d28d9;
+        --purple-dark:#5b21b6;
+        --purple-tint:#f3edfd;
+        --yellow:#facc15;
+        --ink:#111827;
+        --ink-soft:#6b7280;
+        --ink-faint:#9ca3af;
+        --danger:#dc2626;
+        --radius:10px;
+        font-family:'Inter', system-ui, sans-serif;
+        color:var(--ink);
+        background:var(--page-bg);
+        margin:0 -12px;
+        padding:40px 12px;
+    }
+    .sv-page * { box-sizing:border-box; }
+
+    .sv-wrap { max-width:640px; margin:0 auto; }
+
+    .sv-eyebrow {
+        font-size:12px;
+        font-weight:700;
+        letter-spacing:.06em;
+        text-transform:uppercase;
+        color:var(--ink-faint);
+        margin:0 0 6px;
+    }
+    .sv-title {
+        font-size:24px;
+        font-weight:700;
+        margin:0 0 28px;
+        color:var(--ink);
+    }
+
+    .sv-card {
+        background:var(--card-bg);
+        border:1px solid var(--border);
+        border-radius:16px;
+        box-shadow:0 1px 2px rgba(17,24,39,0.03);
+        padding:32px;
+    }
+
+    .sv-stepper {
+        display:flex;
+        align-items:center;
+        margin-bottom:28px;
+        overflow-x:auto;
+    }
+    .sv-step-item {
+        display:flex;
+        align-items:center;
+        gap:8px;
+        white-space:nowrap;
+        flex:0 0 auto;
+    }
+    .sv-step-circle {
+        width:26px; height:26px;
+        border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:13px; font-weight:700;
+        background:#eef0f3;
+        color:var(--ink-faint);
+        flex:0 0 auto;
+    }
+    .sv-step-label {
+        font-size:14px;
+        font-weight:600;
+        color:var(--ink-faint);
+    }
+    .sv-step-line {
+        flex:1 1 auto;
+        height:1px;
+        background:var(--border);
+        margin:0 14px;
+        min-width:20px;
+    }
+    .sv-step-item.is-active .sv-step-circle { background:var(--purple); color:#fff; }
+    .sv-step-item.is-active .sv-step-label { color:var(--purple-dark); }
+    .sv-step-item.is-done .sv-step-circle { background:var(--yellow); color:#1f2937; }
+    .sv-step-item.is-done .sv-step-label { color:var(--ink); }
+
+    .wizard-step { display:none; }
+    .wizard-step.active { display:block; }
+
+    .sv-section-title {
+        font-size:16px;
+        font-weight:700;
+        color:var(--ink);
+        margin:0 0 20px;
+    }
+
+    .sv-field { margin-bottom:18px; }
+
+    .sv-inline-box {
+        display:flex;
+        align-items:center;
+        gap:10px;
+        border:1px solid var(--border);
+        border-radius:var(--radius);
+        padding:12px 14px;
+        background:#fff;
+        transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .sv-inline-box:focus-within {
+        border-color:var(--purple);
+        box-shadow:0 0 0 3px var(--purple-tint);
+    }
+    .sv-inline-box__label {
+        font-weight:700;
+        font-size:14.5px;
+        color:var(--ink);
+        flex:0 0 auto;
+        white-space:nowrap;
+    }
+    .sv-inline-box__label .req { color:var(--danger); margin-left:2px; }
+    .sv-inline-box input,
+    .sv-inline-box select {
+        flex:1 1 auto;
+        border:none;
+        outline:none;
+        font-family:inherit;
+        font-size:14.5px;
+        color:var(--ink);
+        background:transparent;
+        appearance:none;
+        min-width:0;
+    }
+    .sv-inline-box input::placeholder { color:var(--ink-faint); }
+    .sv-inline-box select { cursor:pointer; }
+
+    .sv-stack-label {
+        display:block;
+        font-weight:700;
+        font-size:14.5px;
+        color:var(--ink);
+        margin:0 0 8px;
+    }
+    .sv-stack-label .req { color:var(--danger); margin-left:2px; }
+
+    .sv-textarea {
+        width:100%;
+        font-family:inherit;
+        font-size:14.5px;
+        color:var(--ink);
+        border:1px solid var(--border);
+        border-radius:var(--radius);
+        padding:12px 14px;
+        min-height:96px;
+        resize:vertical;
+        transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .sv-textarea:focus {
+        outline:none;
+        border-color:var(--purple);
+        box-shadow:0 0 0 3px var(--purple-tint);
+    }
+    .sv-textarea::placeholder { color:var(--ink-faint); }
+
+    .sv-help {
+        margin:6px 0 0;
+        font-size:12.5px;
+        color:var(--ink-soft);
+    }
+
+    .sv-upload {
+        border:1.5px dashed #d1d5db;
+        border-radius:12px;
+        padding:30px 20px;
+        text-align:center;
+        background:#fff;
+        transition:border-color .15s ease, background .15s ease;
+    }
+    .sv-upload:focus-within, .sv-upload:hover { border-color:var(--purple); background:var(--purple-tint); }
+    .sv-upload input[type="file"] {
+        font-family:inherit;
+        font-size:13.5px;
+        color:var(--ink-soft);
+    }
+    .sv-upload__icon { color:var(--purple); margin-bottom:8px; }
+    .sv-note--warning {
+        margin:12px 0 0;
+        font-size:12.5px;
+        color:#8a5a00;
+        background:#fff6e0;
+        border:1px solid #f0d48a;
+        border-radius:6px;
+        padding:8px 10px;
+        text-align:left;
+    }
+
+    .sv-actions {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        margin-top:28px;
+        flex-wrap:wrap;
+    }
+    .sv-btn {
+        font-family:inherit;
+        font-size:14.5px;
+        font-weight:600;
+        border-radius:8px;
+        padding:11px 22px;
+        cursor:pointer;
+        border:1px solid transparent;
+        transition:background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease;
+    }
+    .sv-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .sv-btn--ghost { background:transparent; border-color:var(--border); color:var(--ink-soft); }
+    .sv-btn--ghost:not(:disabled):hover { border-color:#c4c4c8; color:var(--ink); }
+    .sv-btn--primary { background:var(--purple); color:#fff; }
+    .sv-btn--primary:not(:disabled):hover { background:var(--purple-dark); }
+    .sv-btn--submit { background:var(--yellow); color:#1f2937; }
+    .sv-btn--submit:not(:disabled):hover { filter:brightness(0.97); }
+
+    @@media (max-width:520px) {
+        .sv-card { padding:22px; }
+        .sv-title { font-size:20px; }
+        .sv-actions { justify-content:stretch; }
+        .sv-actions .sv-btn { flex:1; text-align:center; }
+    }
+</style>
+
+<div class="sv-page">
+    <div class="sv-wrap">
+        <p class="sv-eyebrow">Survei Digital</p>
+        <h1 class="sv-title">Isi Survey</h1>
+
+        <div class="sv-card">
+            <div class="sv-stepper" id="stepper"></div>
+
+            <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
+                <input type="hidden" name="formVersionId" value="@Model.Id" />
+
+                @{ var stepIndex = 0; }
+
+                @foreach (var sec in sectionsOrdered)
+                {
+                    <div class="wizard-step @(stepIndex == 0 ? "active" : "")" data-step="@stepIndex">
+                        <h2 class="sv-section-title">@sec.SectionTitle</h2>
+
+                        @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
+                        {
+                            <div class="sv-field question-wrapper" data-question-id="@q.Id">
+                                @{
+                                    var fieldName = $"answers[{q.Id}]";
+                                    var qType = q.QuestionType?.ToLower() ?? "text";
+                                }
+
+                                @if (qType == "textarea")
+                                {
+                                    <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
+                                    <textarea name="@fieldName" class="sv-textarea"
+                                              placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                              required="@q.IsRequired"></textarea>
+                                }
+                                else if (qType == "number")
+                                {
+                                    <div class="sv-inline-box">
+                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                        <input type="number" name="@fieldName"
+                                               placeholder="@q.Placeholder"
+                                               min="@q.MinValue" max="@q.MaxValue"
+                                               required="@q.IsRequired" />
+                                    </div>
+                                }
+                                else if (qType == "date")
+                                {
+                                    <div class="sv-inline-box">
+                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                        <input type="date" name="@fieldName" required="@q.IsRequired" />
+                                    </div>
+                                }
+                                else if (qType == "dropdown")
+                                {
+                                    <div class="sv-inline-box">
+                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                        <select name="@fieldName" required="@q.IsRequired">
+                                            <option value="">-- Pilih --</option>
+                                            @foreach (var opt in q.SurveyQuestionOptions.OrderBy(o => o.OrderNo))
+                                            {
+                                                <option value="@opt.OptionValue">@opt.OptionLabel</option>
+                                            }
+                                        </select>
+                                    </div>
+                                }
+                                else if (qType == "boolean")
+                                {
+                                    <div class="sv-inline-box">
+                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                        <select name="@fieldName" required="@q.IsRequired">
+                                            <option value="">-- Pilih --</option>
+                                            <option value="true">Ya</option>
+                                            <option value="false">Tidak</option>
+                                        </select>
+                                    </div>
+                                }
+                                else if (qType == "photo")
+                                {
+                                    <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
+                                    <div class="sv-upload">
+                                        <div class="sv-upload__icon">
+                                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
+                                        </div>
+                                        <input type="file" name="@fieldName" accept="image/*" required="@q.IsRequired" />
+                                        <p class="sv-note--warning">
+                                            Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
+                                        </p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="sv-inline-box">
+                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                        <input type="text" name="@fieldName"
+                                               placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                               required="@q.IsRequired" />
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(q.HelpText))
+                                {
+                                    <p class="sv-help">@q.HelpText</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                    stepIndex++;
+                }
+
+                <div class="sv-actions">
+                    <button type="button" id="btnPrev" class="sv-btn sv-btn--ghost" disabled>Sebelumnya</button>
+                    <button type="button" id="btnNext" class="sv-btn sv-btn--primary">Selanjutnya</button>
+                    <button type="submit" id="btnSubmit" class="sv-btn sv-btn--submit" style="display: none;">Submit Survey</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script id="sv-rules-data" type="application/json">@Html.Raw(rulesJson)</script>
+<script id="sv-titles-data" type="application/json">@Html.Raw(sectionTitlesJson)</script>
+
 <script>
-    const surveyRules = @Html.Raw(rulesJson);
+    const surveyRules = JSON.parse(document.getElementById('sv-rules-data').textContent);
+    const sectionTitles = JSON.parse(document.getElementById('sv-titles-data').textContent);
     const steps = Array.from(document.querySelectorAll(".wizard-step"));
     const totalSteps = steps.length;
     let currentStep = 0;
 
-    // ---------- Rule engine (show/hide per pertanyaan) ----------
     function getFieldValue(questionId) {
         const el = document.querySelector(`[name="answers[${questionId}]"]`);
         return el ? el.value : null;
@@ -214,9 +421,8 @@
 
     function isRuleHidden(questionId) {
         const rulesForQuestion = surveyRules.filter(r => r.questionId === questionId);
-        if (rulesForQuestion.length === 0) return false; // gak ada rule = selalu tampil
+        if (rulesForQuestion.length === 0) return false;
 
-        // kalau ada beberapa rule buat 1 pertanyaan, cukup salah satu terpenuhi
         return !rulesForQuestion.some(rule => {
             const conditionMet = evaluateCondition(rule);
             const action = (rule.action || "SHOW").toUpperCase();
@@ -231,57 +437,68 @@
 
             wrapper.style.display = hidden ? "none" : "";
             wrapper.querySelectorAll("input, select, textarea").forEach(inp => {
-                // hanya di-disable karena rule; step visibility diatur terpisah di updateStepView()
                 inp.dataset.ruleHidden = hidden ? "1" : "0";
             });
         });
     }
 
-    // ---------- Wizard navigation ----------
-    function updateStepView() {
-        steps.forEach((step, idx) => {
-            const isActive = idx === currentStep;
-            step.classList.toggle("active", isActive);
-
-            // disable semua field di step yang gak aktif, ATAU yang disembunyikan rule
-            step.querySelectorAll("input, select, textarea").forEach(inp => {
-                const ruleHidden = inp.dataset.ruleHidden === "1";
-                inp.disabled = !isActive || ruleHidden;
-            });
-        });
-
-        document.getElementById("stepLabel").textContent =
-            `Bagian ${currentStep + 1} dari ${totalSteps}: ${steps[currentStep].querySelector(".card-header strong").textContent}`;
-
-        document.getElementById("progressFill").style.width =
-            `${((currentStep + 1) / totalSteps) * 100}%`;
-
-        document.getElementById("btnPrev").disabled = currentStep === 0;
-        document.getElementById("btnNext").style.display = currentStep === totalSteps - 1 ? "none" : "inline-block";
-        document.getElementById("btnSubmit").style.display = currentStep === totalSteps - 1 ? "inline-block" : "none";
-
-        renderNavDots();
-    }
-
-    function renderNavDots() {
-        const container = document.getElementById("navDots");
+    // ---------- Stepper ----------
+    function renderStepper() {
+        const container = document.getElementById("stepper");
         container.innerHTML = "";
-        for (let i = 0; i < totalSteps; i++) {
-            const dot = document.createElement("div");
-            dot.className = "wizard-nav-dot" +
-                (i === currentStep ? " active" : "") +
-                (i < currentStep ? " visited" : "");
-            dot.title = `Bagian ${i + 1}`;
-            dot.addEventListener("click", () => {
-                // cuma boleh lompat ke step yang udah pernah dilewati atau step saat ini
+        sectionTitles.forEach((title, i) => {
+            const item = document.createElement("div");
+            item.className = "sv-step-item" +
+                (i === currentStep ? " is-active" : "") +
+                (i < currentStep ? " is-done" : "");
+
+            const circle = document.createElement("span");
+            circle.className = "sv-step-circle";
+            if (i < currentStep) {
+                circle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            } else {
+                circle.textContent = i + 1;
+            }
+
+            const label = document.createElement("span");
+            label.className = "sv-step-label";
+            label.textContent = title;
+
+            item.appendChild(circle);
+            item.appendChild(label);
+            item.addEventListener("click", () => {
                 if (i <= currentStep) {
                     currentStep = i;
                     applyQuestionRules();
                     updateStepView();
                 }
             });
-            container.appendChild(dot);
-        }
+            container.appendChild(item);
+
+            if (i < sectionTitles.length - 1) {
+                const line = document.createElement("div");
+                line.className = "sv-step-line";
+                container.appendChild(line);
+            }
+        });
+    }
+
+    function updateStepView() {
+        steps.forEach((step, idx) => {
+            const isActive = idx === currentStep;
+            step.classList.toggle("active", isActive);
+
+            step.querySelectorAll("input, select, textarea").forEach(inp => {
+                const ruleHidden = inp.dataset.ruleHidden === "1";
+                inp.disabled = !isActive || ruleHidden;
+            });
+        });
+
+        document.getElementById("btnPrev").disabled = currentStep === 0;
+        document.getElementById("btnNext").style.display = currentStep === totalSteps - 1 ? "none" : "inline-block";
+        document.getElementById("btnSubmit").style.display = currentStep === totalSteps - 1 ? "inline-block" : "none";
+
+        renderStepper();
     }
 
     function validateCurrentStep() {

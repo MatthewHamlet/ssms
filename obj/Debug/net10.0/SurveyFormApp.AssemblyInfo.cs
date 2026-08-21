@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SurveyFormApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c9ed86e6c7a52dbe30e9d9b223560409033c2f5a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+26016e60c2800eb8f29e5b9f58a265cf72cd26de")]
 [assembly: System.Reflection.AssemblyProductAttribute("SurveyFormApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SurveyFormApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
