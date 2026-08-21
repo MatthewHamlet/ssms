@@ -229,3 +229,4 @@ C:\Users\MyBook SAGA\Downloads\acp-code\pkl (webdev)\ssms\SurveyFormApp\obj\Debu
 C:\Users\MyBook SAGA\Downloads\acp-code\pkl (webdev)\ssms\SurveyFormApp\obj\Debug\net10.0\SurveyFormApp.pdb
 C:\Users\MyBook SAGA\Downloads\acp-code\pkl (webdev)\ssms\SurveyFormApp\obj\Debug\net10.0\SurveyFormApp.genruntimeconfig.cache
 C:\Users\MyBook SAGA\Downloads\acp-code\pkl (webdev)\ssms\SurveyFormApp\obj\Debug\net10.0\ref\SurveyFormApp.dll
+C:\Users\MyBook SAGA\Downloads\acp-code\pkl (webdev)\ssms\SurveyFormApp\obj\Debug\net10.0\SurveyFormApp.sourcelink.json

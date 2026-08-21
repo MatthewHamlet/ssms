@@ -1,0 +1,333 @@
+@model SurveyFormApp.Models.SurveyFormVersion
+
+<style>
+    .wizard-progress-bar {
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        margin-bottom: 8px;
+        overflow: hidden;
+    }
+    .wizard-progress-fill {
+        height: 100%;
+        background: #198754;
+        transition: width 0.25s ease;
+    }
+    .wizard-step-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+    .wizard-step {
+        display: none;
+    }
+    .wizard-step.active {
+        display: block;
+    }
+    .wizard-nav-dots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 20px;
+    }
+    .wizard-nav-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #dee2e6;
+        cursor: pointer;
+    }
+    .wizard-nav-dot.active {
+        background: #198754;
+        width: 14px;
+        height: 14px;
+    }
+    .wizard-nav-dot.visited {
+        background: #75c9a3;
+    }
+</style>
+
+<h1>Isi Survey</h1>
+
+<form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
+    <input type="hidden" name="formVersionId" value="@Model.Id" />
+
+    <div class="wizard-progress-bar">
+        <div class="wizard-progress-fill" id="progressFill" style="width: 0%;"></div>
+    </div>
+    <div class="wizard-step-label" id="stepLabel">Bagian 1</div>
+    <div class="wizard-nav-dots" id="navDots"></div>
+
+    @{
+        var sectionsOrdered = Model.SurveySections.OrderBy(s => s.OrderNo).ToList();
+        var stepIndex = 0;
+    }
+
+    @foreach (var sec in sectionsOrdered)
+    {
+        <div class="card mb-4 wizard-step @(stepIndex == 0 ? "active" : "")" data-step="@stepIndex">
+            <div class="card-header">
+                <strong>@sec.SectionTitle</strong>
+            </div>
+            <div class="card-body">
+                @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
+                {
+                    <div class="mb-3 question-wrapper" data-question-id="@q.Id">
+                        <label class="form-label">
+                            @q.QuestionText
+                            @if (q.IsRequired) { <span class="text-danger">*</span> }
+                        </label>
+
+                        @{
+                            var fieldName = $"answers[{q.Id}]";
+                            var qType = q.QuestionType?.ToLower() ?? "text";
+                        }
+
+                        @if (qType == "textarea")
+                        {
+                            <textarea name="@fieldName" class="form-control"
+                                      placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                      required="@q.IsRequired"></textarea>
+                        }
+                        else if (qType == "number")
+                        {
+                            <input type="number" name="@fieldName" class="form-control"
+                                   placeholder="@q.Placeholder"
+                                   min="@q.MinValue" max="@q.MaxValue"
+                                   required="@q.IsRequired" />
+                        }
+                        else if (qType == "date")
+                        {
+                            <input type="date" name="@fieldName" class="form-control"
+                                   required="@q.IsRequired" />
+                        }
+                        else if (qType == "dropdown")
+                        {
+                            <select name="@fieldName" class="form-select" required="@q.IsRequired">
+                                <option value="">-- Pilih --</option>
+                                @foreach (var opt in q.SurveyQuestionOptions.OrderBy(o => o.OrderNo))
+                                {
+                                    <option value="@opt.OptionValue">@opt.OptionLabel</option>
+                                }
+                            </select>
+                        }
+                        else if (qType == "boolean")
+                        {
+                            <select name="@fieldName" class="form-select" required="@q.IsRequired">
+                                <option value="">-- Pilih --</option>
+                                <option value="true">Ya</option>
+                                <option value="false">Tidak</option>
+                            </select>
+                        }
+                        else if (qType == "photo")
+                        {
+                            <input type="file" name="@fieldName" class="form-control" accept="image/*"
+                                   required="@q.IsRequired" />
+                            <div class="form-text text-warning">
+                                Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
+                            </div>
+                        }
+                        else
+                        {
+                            <input type="text" name="@fieldName" class="form-control"
+                                   placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                   required="@q.IsRequired" />
+                        }
+
+                        @if (!string.IsNullOrEmpty(q.HelpText))
+                        {
+                            <div class="form-text">@q.HelpText</div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        stepIndex++;
+    }
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" id="btnPrev" class="btn btn-outline-secondary" disabled>&laquo; Sebelumnya</button>
+        <button type="button" id="btnNext" class="btn btn-primary">Selanjutnya &raquo;</button>
+        <button type="submit" id="btnSubmit" class="btn btn-success" style="display: none;">Submit Survey</button>
+    </div>
+</form>
+
+@{
+    var allQuestions = Model.SurveySections.SelectMany(s => s.SurveyQuestions).ToList();
+    var rules = allQuestions
+        .SelectMany(q => q.SurveyQuestionRuleQuestions.Select(r => new
+        {
+            questionId = q.Id,
+            dependsOnQuestionId = r.DependsOnQuestionId,
+            operatorType = r.Operator,
+            value = r.Value,
+            action = r.Action
+        }))
+        .ToList();
+    var rulesJson = System.Text.Json.JsonSerializer.Serialize(rules);
+}
+
+<script>
+    const surveyRules = @Html.Raw(rulesJson);
+    const steps = Array.from(document.querySelectorAll(".wizard-step"));
+    const totalSteps = steps.length;
+    let currentStep = 0;
+
+    // ---------- Rule engine (show/hide per pertanyaan) ----------
+    function getFieldValue(questionId) {
+        const el = document.querySelector(`[name="answers[${questionId}]"]`);
+        return el ? el.value : null;
+    }
+
+    function evaluateCondition(rule) {
+        const currentValue = getFieldValue(rule.dependsOnQuestionId);
+        if (currentValue === null || currentValue === "") return false;
+
+        const op = (rule.operatorType || "EQUAL").toUpperCase().trim();
+        const target = (rule.value ?? "").trim();
+
+        switch (op) {
+            case "EQUAL":
+            case "=":
+            case "==":
+            case "EQUALS":
+                return currentValue.toString().toLowerCase() === target.toLowerCase();
+            case "NOT_EQUAL":
+            case "!=":
+                return currentValue.toString().toLowerCase() !== target.toLowerCase();
+            case "CONTAINS":
+                return currentValue.toLowerCase().includes(target.toLowerCase());
+            case "GREATER_THAN":
+            case ">":
+                return parseFloat(currentValue) > parseFloat(target);
+            case "LESS_THAN":
+            case "<":
+                return parseFloat(currentValue) < parseFloat(target);
+            case ">=":
+                return parseFloat(currentValue) >= parseFloat(target);
+            case "<=":
+                return parseFloat(currentValue) <= parseFloat(target);
+            default:
+                return currentValue.toString().toLowerCase() === target.toLowerCase();
+        }
+    }
+
+    function isRuleHidden(questionId) {
+        const rulesForQuestion = surveyRules.filter(r => r.questionId === questionId);
+        if (rulesForQuestion.length === 0) return false; // gak ada rule = selalu tampil
+
+        // kalau ada beberapa rule buat 1 pertanyaan, cukup salah satu terpenuhi
+        return !rulesForQuestion.some(rule => {
+            const conditionMet = evaluateCondition(rule);
+            const action = (rule.action || "SHOW").toUpperCase();
+            return action === "HIDE" ? !conditionMet : conditionMet;
+        });
+    }
+
+    function applyQuestionRules() {
+        document.querySelectorAll(".question-wrapper").forEach(wrapper => {
+            const qId = parseInt(wrapper.dataset.questionId, 10);
+            const hidden = isRuleHidden(qId);
+
+            wrapper.style.display = hidden ? "none" : "";
+            wrapper.querySelectorAll("input, select, textarea").forEach(inp => {
+                // hanya di-disable karena rule; step visibility diatur terpisah di updateStepView()
+                inp.dataset.ruleHidden = hidden ? "1" : "0";
+            });
+        });
+    }
+
+    // ---------- Wizard navigation ----------
+    function updateStepView() {
+        steps.forEach((step, idx) => {
+            const isActive = idx === currentStep;
+            step.classList.toggle("active", isActive);
+
+            // disable semua field di step yang gak aktif, ATAU yang disembunyikan rule
+            step.querySelectorAll("input, select, textarea").forEach(inp => {
+                const ruleHidden = inp.dataset.ruleHidden === "1";
+                inp.disabled = !isActive || ruleHidden;
+            });
+        });
+
+        document.getElementById("stepLabel").textContent =
+            `Bagian ${currentStep + 1} dari ${totalSteps}: ${steps[currentStep].querySelector(".card-header strong").textContent}`;
+
+        document.getElementById("progressFill").style.width =
+            `${((currentStep + 1) / totalSteps) * 100}%`;
+
+        document.getElementById("btnPrev").disabled = currentStep === 0;
+        document.getElementById("btnNext").style.display = currentStep === totalSteps - 1 ? "none" : "inline-block";
+        document.getElementById("btnSubmit").style.display = currentStep === totalSteps - 1 ? "inline-block" : "none";
+
+        renderNavDots();
+    }
+
+    function renderNavDots() {
+        const container = document.getElementById("navDots");
+        container.innerHTML = "";
+        for (let i = 0; i < totalSteps; i++) {
+            const dot = document.createElement("div");
+            dot.className = "wizard-nav-dot" +
+                (i === currentStep ? " active" : "") +
+                (i < currentStep ? " visited" : "");
+            dot.title = `Bagian ${i + 1}`;
+            dot.addEventListener("click", () => {
+                // cuma boleh lompat ke step yang udah pernah dilewati atau step saat ini
+                if (i <= currentStep) {
+                    currentStep = i;
+                    applyQuestionRules();
+                    updateStepView();
+                }
+            });
+            container.appendChild(dot);
+        }
+    }
+
+    function validateCurrentStep() {
+        const step = steps[currentStep];
+        const invalidField = Array.from(step.querySelectorAll("input, select, textarea"))
+            .find(inp => !inp.disabled && !inp.checkValidity());
+
+        if (invalidField) {
+            invalidField.reportValidity();
+            return false;
+        }
+        return true;
+    }
+
+    document.getElementById("btnNext").addEventListener("click", () => {
+        if (!validateCurrentStep()) return;
+        if (currentStep < totalSteps - 1) {
+            currentStep++;
+            applyQuestionRules();
+            updateStepView();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    });
+
+    document.getElementById("btnPrev").addEventListener("click", () => {
+        if (currentStep > 0) {
+            currentStep--;
+            applyQuestionRules();
+            updateStepView();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    });
+
+    document.getElementById("surveyForm").addEventListener("submit", (e) => {
+        if (!validateCurrentStep()) {
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener("change", () => {
+        applyQuestionRules();
+        updateStepView();
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+        applyQuestionRules();
+        updateStepView();
+    });
+</script>

@@ -1,0 +1,27 @@
+@model List<SurveyFormApp.Models.SurveyForm>
+
+<h1>Daftar Form Survey</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Kode Form</th>
+            <th>Nama Form</th>
+            <th>Tipe Produk</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var form in Model)
+        {
+            <tr>
+                <td>@form.FormCode</td>
+                <td>@form.FormName</td>
+                <td>@form.ProductType</td>
+                <td>
+                    <a asp-action="Fill" asp-route-id="@form.Id" class="btn btn-primary btn-sm">Isi Form</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

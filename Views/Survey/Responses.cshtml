@@ -1,0 +1,31 @@
+@model List<SurveyFormApp.Models.SurveyResponse>
+
+<h1>Daftar Jawaban Survey</h1>
+
+<a asp-action="Index" class="btn btn-outline-secondary mb-3">Kembali ke Daftar Form</a>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Form</th>
+            <th>Surveyor</th>
+            <th>Status</th>
+            <th>Waktu Submit</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td>@r.Assignment?.FormVersion?.Form?.FormName</td>
+                <td>@r.SurveyorId</td>
+                <td>@r.Status</td>
+                <td>@r.SubmittedAt</td>
+                <td>
+                    <a asp-action="ResponseDetail" asp-route-id="@r.Id" class="btn btn-sm btn-primary">Lihat Detail</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

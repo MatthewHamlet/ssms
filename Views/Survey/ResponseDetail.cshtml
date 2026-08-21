@@ -1,0 +1,28 @@
+@model SurveyFormApp.Models.SurveyResponse
+
+<h1>Detail Jawaban</h1>
+<p><strong>Form:</strong> @Model.Assignment?.FormVersion?.Form?.FormName</p>
+<p><strong>Surveyor:</strong> @Model.SurveyorId</p>
+<p><strong>Waktu Submit:</strong> @Model.SubmittedAt</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Section</th>
+            <th>Pertanyaan</th>
+            <th>Jawaban</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var a in Model.SurveyAnswers.OrderBy(a => a.Question.OrderNo))
+        {
+            <tr>
+                <td>@a.Question?.Section?.SectionTitle</td>
+                <td>@a.Question?.QuestionText</td>
+                <td>@(a.ValueText ?? a.ValueNumber?.ToString() ?? a.ValueDate?.ToString() ?? a.ValueBoolean?.ToString() ?? "-")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Responses" class="btn btn-secondary">Kembali ke Daftar Jawaban</a>
