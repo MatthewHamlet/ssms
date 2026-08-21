@@ -19,6 +19,8 @@
     var sectionTitlesJson = System.Text.Json.JsonSerializer.Serialize(sectionsOrdered.Select(s => s.SectionTitle));
 }
 
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
 <style>
     @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -26,6 +28,112 @@
       overflow-x:hidden;
     }
 
+    /* ═══════════════ SIDEBAR VARIABLES ═══════════════ */
+    :root {
+        --sb-w: 250px;
+        --sb-w-collapsed: 72px;
+        --sb-bg: linear-gradient(180deg,#2e1065 0%,#1c0a3e 100%);
+        --sb-topbar-h: 60px;
+    }
+
+    /* ═══════════════ SIDEBAR ═══════════════ */
+    #sv-sidebar {
+        position:fixed; top:0; left:0; bottom:0;
+        width:var(--sb-w);
+        background:var(--sb-bg);
+        z-index:1000;
+        display:flex; flex-direction:column;
+        transition:width .25s ease;
+        overflow:hidden;
+        box-shadow:4px 0 20px rgba(0,0,0,.18);
+        font-family:'Inter', system-ui, sans-serif;
+    }
+    #sv-sidebar.collapsed { width:var(--sb-w-collapsed); }
+
+    .sb-logo {
+        display:flex; align-items:center; gap:12px;
+        padding:0 18px; height:var(--sb-topbar-h);
+        border-bottom:1px solid rgba(255,255,255,.08);
+        flex-shrink:0; white-space:nowrap; overflow:hidden;
+    }
+    .sb-logo-icon {
+        width:34px; height:34px; border-radius:9px; flex-shrink:0;
+        background:linear-gradient(135deg,#facc15,#eab308);
+        display:flex; align-items:center; justify-content:center;
+        font-size:15px; font-weight:800; color:#1f2937;
+    }
+    .sb-logo-text { font-size:17px; font-weight:800; color:#fff; letter-spacing:-.4px; transition:opacity .2s; }
+    .sb-logo-text em { color:#facc15; font-style:normal; }
+    #sv-sidebar.collapsed .sb-logo-text { opacity:0; pointer-events:none; }
+
+    .sb-scroll { flex:1; overflow-y:auto; overflow-x:hidden; padding:14px 0 8px; }
+    .sb-scroll::-webkit-scrollbar { width:0; }
+
+    .sb-section {
+        font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.1px;
+        color:rgba(255,255,255,.28); padding:12px 20px 6px; white-space:nowrap; overflow:hidden;
+        transition:opacity .2s;
+    }
+    #sv-sidebar.collapsed .sb-section { opacity:0; }
+
+    .sb-item {
+        display:flex; align-items:center; gap:12px;
+        padding:10px 16px; margin:2px 8px;
+        color:rgba(255,255,255,.6); border-radius:10px;
+        cursor:pointer; white-space:nowrap; overflow:hidden;
+        transition:.18s ease; position:relative; text-decoration:none;
+    }
+    .sb-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+    .sb-item.active {
+        background:linear-gradient(135deg,rgba(250,204,21,.18),rgba(250,204,21,.08));
+        color:#facc15; font-weight:600;
+    }
+    .sb-item.active::before {
+        content:''; position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+        width:4px; height:22px; background:#facc15; border-radius:0 4px 4px 0;
+    }
+    .sb-item i { font-size:16px; flex-shrink:0; width:20px; text-align:center; }
+    .sb-label { font-size:13.5px; transition:opacity .2s; flex:1; }
+    #sv-sidebar.collapsed .sb-label { opacity:0; width:0; }
+
+    .sb-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,.08); flex-shrink:0; }
+    .sb-user { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; white-space:nowrap; overflow:hidden; }
+    .sb-avatar {
+        width:32px; height:32px; border-radius:50%; flex-shrink:0;
+        background:linear-gradient(135deg,#facc15,#d97706);
+        display:flex; align-items:center; justify-content:center;
+        color:#1f2937; font-weight:700; font-size:12px;
+    }
+    .sb-uname { color:#fff; font-size:13px; font-weight:600; }
+    .sb-urole { color:rgba(255,255,255,.4); font-size:11px; }
+
+    /* ═══════════════ TOP MOBILE BAR (sidebar toggle) ═══════════════ */
+    #sv-topbar {
+        display:none;
+        align-items:center; gap:10px;
+        height:52px; padding:0 12px;
+        position:sticky; top:0; z-index:900;
+        background:#fff; border-bottom:1px solid #e5e7eb;
+    }
+    #sv-topbar .tb-toggle {
+        width:36px; height:36px; border:1.5px solid #e5e7eb; border-radius:8px;
+        background:#fff; display:flex; align-items:center; justify-content:center;
+        color:#6d28d9; cursor:pointer;
+    }
+    #sv-topbar .tb-title { font-weight:700; font-size:14px; color:#111827; }
+
+    /* ═══════════════ WRAP (shifts content by sidebar width) ═══════════════ */
+    #sv-wrap { margin-left:var(--sb-w); transition:margin-left .25s ease; min-height:100vh; }
+    #sv-wrap.sb-collapsed { margin-left:var(--sb-w-collapsed); }
+
+    @@media (max-width:860px) {
+        #sv-sidebar { transform:translateX(-100%); width:var(--sb-w) !important; }
+        #sv-sidebar.mobile-open { transform:translateX(0); }
+        #sv-wrap, #sv-wrap.sb-collapsed { margin-left:0 !important; }
+        #sv-topbar { display:flex; }
+    }
+
+    /* ═══════════════ EXISTING FORM STYLES ═══════════════ */
     .sv-page {
         --page-bg:#f0eff4;
         --card-bg:#ffffff;
@@ -42,8 +150,9 @@
         font-family:'Inter', system-ui, sans-serif;
         color:var(--ink);
         background:var(--page-bg);
-        margin:0 -12px;
+        margin:0;
         padding:40px 12px;
+        min-height:100vh;
     }
     .sv-page * { box-sizing:border-box; }
 
@@ -254,119 +363,160 @@
     }
 </style>
 
-<div class="sv-page">
-    <div class="sv-wrap">
-        <p class="sv-eyebrow">Survei Digital</p>
-        <h1 class="sv-title">Isi Survey</h1>
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<nav id="sv-sidebar">
+    <div class="sb-logo">
+        <div class="sb-logo-icon">SF</div>
+        <span class="sb-logo-text">Survey<em>Form</em></span>
+    </div>
+    <div class="sb-scroll">
+        <div class="sb-section">Menu</div>
+        <a class="sb-item" asp-controller="Home" asp-action="Index">
+            <i class="bi bi-house-door-fill"></i><span class="sb-label">Beranda</span>
+        </a>
+        <a class="sb-item" asp-controller="Survey" asp-action="Index">
+            <i class="bi bi-ui-checks-grid"></i><span class="sb-label">Daftar Form</span>
+        </a>
+        <a class="sb-item active" asp-controller="Survey" asp-action="Fill" asp-route-id="@(Model.Form?.Id ?? 0)">
+            <i class="bi bi-pencil-square"></i><span class="sb-label">Isi Survey</span>
+        </a>
+        <a class="sb-item" asp-controller="Survey" asp-action="Responses">
+            <i class="bi bi-clipboard-data-fill"></i><span class="sb-label">Daftar Jawaban</span>
+        </a>
+        <div class="sb-section">Lainnya</div>
+        <a class="sb-item" asp-controller="Home" asp-action="Privacy">
+            <i class="bi bi-shield-lock-fill"></i><span class="sb-label">Privasi</span>
+        </a>
+    </div>
+    <div class="sb-footer">
+        <div class="sb-user">
+            <div class="sb-avatar">SV</div>
+            <div><div class="sb-uname">Surveyor</div><div class="sb-urole">Field Agent</div></div>
+        </div>
+    </div>
+</nav>
 
-        <div class="sv-card">
-            <div class="sv-stepper" id="stepper"></div>
+<!-- ══════════════ MAIN WRAP ══════════════ -->
+<div id="sv-wrap">
+    <div id="sv-topbar">
+        <button class="tb-toggle" onclick="toggleSvSidebar()"><i class="bi bi-list" style="font-size:18px;"></i></button>
+        <span class="tb-title">Isi Survey</span>
+    </div>
 
-            <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
-                <input type="hidden" name="formVersionId" value="@Model.Id" />
+    <div class="sv-page">
+        <div class="sv-wrap">
+            <p class="sv-eyebrow">Survei Digital</p>
+            <h1 class="sv-title">Isi Survey</h1>
 
-                @{ var stepIndex = 0; }
+            <div class="sv-card">
+                <div class="sv-stepper" id="stepper"></div>
 
-                @foreach (var sec in sectionsOrdered)
-                {
-                    <div class="wizard-step @(stepIndex == 0 ? "active" : "")" data-step="@stepIndex">
-                        <h2 class="sv-section-title">@sec.SectionTitle</h2>
+                <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
+                    <input type="hidden" name="formVersionId" value="@Model.Id" />
 
-                        @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
-                        {
-                            <div class="sv-field question-wrapper" data-question-id="@q.Id">
-                                @{
-                                    var fieldName = $"answers[{q.Id}]";
-                                    var qType = q.QuestionType?.ToLower() ?? "text";
-                                }
+                    @{ var stepIndex = 0; }
 
-                                @if (qType == "textarea")
-                                {
-                                    <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
-                                    <textarea name="@fieldName" class="sv-textarea"
-                                              placeholder="@q.Placeholder" maxlength="@q.MaxLength"
-                                              required="@q.IsRequired"></textarea>
-                                }
-                                else if (qType == "number")
-                                {
-                                    <div class="sv-inline-box">
-                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
-                                        <input type="number" name="@fieldName"
-                                               placeholder="@q.Placeholder"
-                                               min="@q.MinValue" max="@q.MaxValue"
-                                               required="@q.IsRequired" />
-                                    </div>
-                                }
-                                else if (qType == "date")
-                                {
-                                    <div class="sv-inline-box">
-                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
-                                        <input type="date" name="@fieldName" required="@q.IsRequired" />
-                                    </div>
-                                }
-                                else if (qType == "dropdown")
-                                {
-                                    <div class="sv-inline-box">
-                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
-                                        <select name="@fieldName" required="@q.IsRequired">
-                                            <option value="">-- Pilih --</option>
-                                            @foreach (var opt in q.SurveyQuestionOptions.OrderBy(o => o.OrderNo))
-                                            {
-                                                <option value="@opt.OptionValue">@opt.OptionLabel</option>
-                                            }
-                                        </select>
-                                    </div>
-                                }
-                                else if (qType == "boolean")
-                                {
-                                    <div class="sv-inline-box">
-                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
-                                        <select name="@fieldName" required="@q.IsRequired">
-                                            <option value="">-- Pilih --</option>
-                                            <option value="true">Ya</option>
-                                            <option value="false">Tidak</option>
-                                        </select>
-                                    </div>
-                                }
-                                else if (qType == "photo")
-                                {
-                                    <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
-                                    <div class="sv-upload">
-                                        <div class="sv-upload__icon">
-                                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
+                    @foreach (var sec in sectionsOrdered)
+                    {
+                        <div class="wizard-step @(stepIndex == 0 ? "active" : "")" data-step="@stepIndex">
+                            <h2 class="sv-section-title">@sec.SectionTitle</h2>
+
+                            @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
+                            {
+                                <div class="sv-field question-wrapper" data-question-id="@q.Id">
+                                    @{
+                                        var fieldName = $"answers[{q.Id}]";
+                                        var qType = q.QuestionType?.ToLower() ?? "text";
+                                    }
+
+                                    @if (qType == "textarea")
+                                    {
+                                        <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
+                                        <textarea name="@fieldName" class="sv-textarea"
+                                                  placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                                  required="@q.IsRequired"></textarea>
+                                    }
+                                    else if (qType == "number")
+                                    {
+                                        <div class="sv-inline-box">
+                                            <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                            <input type="number" name="@fieldName"
+                                                   placeholder="@q.Placeholder"
+                                                   min="@q.MinValue" max="@q.MaxValue"
+                                                   required="@q.IsRequired" />
                                         </div>
-                                        <input type="file" name="@fieldName" accept="image/*" required="@q.IsRequired" />
-                                        <p class="sv-note--warning">
-                                            Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
-                                        </p>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="sv-inline-box">
-                                        <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
-                                        <input type="text" name="@fieldName"
-                                               placeholder="@q.Placeholder" maxlength="@q.MaxLength"
-                                               required="@q.IsRequired" />
-                                    </div>
-                                }
+                                    }
+                                    else if (qType == "date")
+                                    {
+                                        <div class="sv-inline-box">
+                                            <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                            <input type="date" name="@fieldName" required="@q.IsRequired" />
+                                        </div>
+                                    }
+                                    else if (qType == "dropdown")
+                                    {
+                                        <div class="sv-inline-box">
+                                            <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                            <select name="@fieldName" required="@q.IsRequired">
+                                                <option value="">-- Pilih --</option>
+                                                @foreach (var opt in q.SurveyQuestionOptions.OrderBy(o => o.OrderNo))
+                                                {
+                                                    <option value="@opt.OptionValue">@opt.OptionLabel</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    }
+                                    else if (qType == "boolean")
+                                    {
+                                        <div class="sv-inline-box">
+                                            <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                            <select name="@fieldName" required="@q.IsRequired">
+                                                <option value="">-- Pilih --</option>
+                                                <option value="true">Ya</option>
+                                                <option value="false">Tidak</option>
+                                            </select>
+                                        </div>
+                                    }
+                                    else if (qType == "photo")
+                                    {
+                                        <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
+                                        <div class="sv-upload">
+                                            <div class="sv-upload__icon">
+                                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
+                                            </div>
+                                            <input type="file" name="@fieldName" accept="image/*" required="@q.IsRequired" />
+                                            <p class="sv-note--warning">
+                                                Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
+                                            </p>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="sv-inline-box">
+                                            <span class="sv-inline-box__label">@q.QuestionText@if (q.IsRequired) { <span class="req">*</span> }:</span>
+                                            <input type="text" name="@fieldName"
+                                                   placeholder="@q.Placeholder" maxlength="@q.MaxLength"
+                                                   required="@q.IsRequired" />
+                                        </div>
+                                    }
 
-                                @if (!string.IsNullOrEmpty(q.HelpText))
-                                {
-                                    <p class="sv-help">@q.HelpText</p>
-                                }
-                            </div>
-                        }
+                                    @if (!string.IsNullOrEmpty(q.HelpText))
+                                    {
+                                        <p class="sv-help">@q.HelpText</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        stepIndex++;
+                    }
+
+                    <div class="sv-actions">
+                        <button type="button" id="btnPrev" class="sv-btn sv-btn--ghost" disabled>Sebelumnya</button>
+                        <button type="button" id="btnNext" class="sv-btn sv-btn--primary">Selanjutnya</button>
+                        <button type="submit" id="btnSubmit" class="sv-btn sv-btn--submit" style="display: none;">Submit Survey</button>
                     </div>
-                    stepIndex++;
-                }
-
-                <div class="sv-actions">
-                    <button type="button" id="btnPrev" class="sv-btn sv-btn--ghost" disabled>Sebelumnya</button>
-                    <button type="button" id="btnNext" class="sv-btn sv-btn--primary">Selanjutnya</button>
-                    <button type="submit" id="btnSubmit" class="sv-btn sv-btn--submit" style="display: none;">Submit Survey</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -375,6 +525,18 @@
 <script id="sv-titles-data" type="application/json">@Html.Raw(sectionTitlesJson)</script>
 
 <script>
+    // ── Sidebar toggle ──
+    function toggleSvSidebar() {
+        const sb = document.getElementById('sv-sidebar');
+        const wrap = document.getElementById('sv-wrap');
+        if (window.innerWidth <= 860) {
+            sb.classList.toggle('mobile-open');
+        } else {
+            sb.classList.toggle('collapsed');
+            wrap.classList.toggle('sb-collapsed');
+        }
+    }
+
     const surveyRules = JSON.parse(document.getElementById('sv-rules-data').textContent);
     const sectionTitles = JSON.parse(document.getElementById('sv-titles-data').textContent);
     const steps = Array.from(document.querySelectorAll(".wizard-step"));
