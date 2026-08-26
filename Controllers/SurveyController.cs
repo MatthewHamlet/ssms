@@ -15,14 +15,14 @@ public class SurveyController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
-    {
-        var forms = await _context.SurveyForms
-            .Where(f => f.IsActive)
-            .ToListAsync();
+public async Task<IActionResult> Index()
+{
+    var forms = await _context.SurveyForms
+        .Where(f => f.IsActive && f.SurveyFormVersions.Any(v => v.IsPublished))
+        .ToListAsync();
 
-        return View(forms);
-    }
+    return View(forms);
+}
 
     public async Task<IActionResult> Fill(long id)
     {
