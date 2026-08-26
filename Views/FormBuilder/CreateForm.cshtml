@@ -1,0 +1,28 @@
+@{
+    ViewData["Title"] = "Buat Form Baru";
+    ViewData["ActiveMenu"] = "formbuilder";
+    Layout = "_SidebarLayout";
+}
+
+<p class="sv-eyebrow">Form Builder</p>
+<h1 class="sv-title">Buat Form Baru</h1>
+
+<div class="sv-card">
+    <form asp-action="CreateForm" method="post">
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+        <div class="mb-3">
+            <label class="form-label">Kode Form</label>
+            <input name="formCode" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Nama Form</label>
+            <input name="formName" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Tipe Produk</label>
+            <input name="productType" class="form-control" />
+        </div>
+        <button type="submit" class="sv-btn sv-btn--primary">Simpan & Lanjut Isi Pertanyaan</button>
+        <a asp-action="Index" class="sv-btn sv-btn--ghost">Batal</a>
+    </form>
+</div>

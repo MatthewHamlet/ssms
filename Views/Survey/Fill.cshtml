@@ -280,6 +280,7 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
     <a class="sf-item" asp-controller="Survey" asp-action="Index"><i class="bi bi-grid-fill"></i><span class="sf-label">Daftar Form</span></a>
     <a class="sf-item active" asp-controller="Survey" asp-action="Fill" asp-route-id="@Model.FormId"><i class="bi bi-pencil-square"></i><span class="sf-label">Isi Survey</span></a>
     <a class="sf-item" asp-controller="Survey" asp-action="Responses"><i class="bi bi-clipboard-data-fill"></i><span class="sf-label">Daftar Jawaban</span></a>
+    <a class="sf-item nav-link text-dark" asp-controller="FormBuilder" asp-action="Index">Form Builder</a>
     <div class="sf-section">Lainnya</div>
     <a class="sf-item" asp-controller="Home" asp-action="Privacy"><i class="bi bi-shield-fill"></i><span class="sf-label">Privasi</span></a>
   </div>
@@ -306,8 +307,21 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
       <div class="sv-card">
         <div class="sv-stepper" id="stepper"></div>
 
-        <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm">
-          <input type="hidden" name="formVersionId" value="@Model.Id" />
+        <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm" novalidate>
+<input type="hidden" name="formVersionId" value="@Model.Id" />
+
+<div class="sv-field sv-full" style="margin-bottom:18px;">
+    <div class="sv-inline-box">
+        <span class="sv-inline-box__label">Nama Surveyor<span class="req">*</span>:</span>
+        <input type="text" name="surveyorName" id="sfSurveyorName" placeholder="Nama kamu" required />
+    </div>
+</div>
+
+<input type="hidden" name="latitude" id="sfLatitude" />
+<input type="hidden" name="longitude" id="sfLongitude" />
+<input type="hidden" name="deviceId" id="sfDeviceId" />
+<input type="hidden" name="appVersion" id="sfAppVersion" value="1.0.0" />
+<input type="hidden" name="durationSeconds" id="sfDuration" />
 
           @{ var stepIndex = 0; }
 
@@ -375,12 +389,13 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
                               }
                               else if (qType == "photo")
                               {
-                                  <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
-                                  <div class="sv-upload">
+                                var photoFieldName = $"photos[{q.Id}]";
+    <label class="sv-stack-label">@q.QuestionText @if (q.IsRequired) { <span class="req">*</span> }</label>
+    <div class="sv-upload">
                                       <div class="sv-upload__icon">
                                           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
                                       </div>
-                                      <input type="file" name="@fieldName" accept="image/*" required="@q.IsRequired" />
+<input type="file" name="@photoFieldName" accept="image/*" required="@q.IsRequired" />
                                       <p class="sv-note--warning">
                                           Catatan: upload foto belum tersimpan otomatis, perlu penanganan tambahan di Controller.
                                       </p>
@@ -434,6 +449,7 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
     const steps = Array.from(document.querySelectorAll(".wizard-step"));
     const totalSteps = steps.length;
     let currentStep = 0;
+    const sfStartTime = Date.now();
 
     function getFieldValue(questionId) {
         const el = document.querySelector(`[name="answers[${questionId}]"]`);
@@ -541,13 +557,13 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
             const isActive = idx === currentStep;
             step.classList.toggle("active", isActive);
 
-step.querySelectorAll("input, select, textarea").forEach(inp => {
-    const ruleHidden = inp.dataset.ruleHidden === "1";
-    inp.disabled = !isActive || ruleHidden;
-    if (inp.tagName === 'SELECT' && inp.nextElementSibling?.classList.contains('sv-select')) {
-        inp.nextElementSibling.classList.toggle('disabled', inp.disabled);
-    }
-});
+            step.querySelectorAll("input, select, textarea").forEach(inp => {
+                const ruleHidden = inp.dataset.ruleHidden === "1";
+                inp.disabled = ruleHidden; // HANYA disable kalau disembunyikan oleh question rule
+                if (inp.tagName === 'SELECT' && inp.nextElementSibling?.classList.contains('sv-select')) {
+                    inp.nextElementSibling.classList.toggle('disabled', ruleHidden);
+                }
+            });
         });
 
         document.getElementById("btnPrev").disabled = currentStep === 0;
@@ -557,27 +573,27 @@ step.querySelectorAll("input, select, textarea").forEach(inp => {
         renderStepper();
     }
 
-function validateCurrentStep() {
-    const step = steps[currentStep];
-    const invalidField = Array.from(step.querySelectorAll("input, select, textarea"))
-        .find(inp => !inp.disabled && !inp.checkValidity());
+    function validateCurrentStep() {
+        const step = steps[currentStep];
+        const invalidField = Array.from(step.querySelectorAll("input, select, textarea"))
+            .find(inp => !inp.disabled && !inp.checkValidity());
 
-    if (invalidField) {
-        const customWrap = invalidField.tagName === 'SELECT' ? invalidField.nextElementSibling : null;
+        if (invalidField) {
+            const customWrap = invalidField.tagName === 'SELECT' ? invalidField.nextElementSibling : null;
 
-        if (customWrap && customWrap.classList.contains('sv-select')) {
-            customWrap.classList.remove('sv-select--invalid');
-            void customWrap.offsetWidth; // reset animasi biar bisa retrigger
-            customWrap.classList.add('sv-select--invalid');
-            customWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            customWrap.querySelector('.sv-select__trigger').focus();
-        } else {
-            invalidField.reportValidity();
+            if (customWrap && customWrap.classList.contains('sv-select')) {
+                customWrap.classList.remove('sv-select--invalid');
+                void customWrap.offsetWidth;
+                customWrap.classList.add('sv-select--invalid');
+                customWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                customWrap.querySelector('.sv-select__trigger').focus();
+            } else {
+                invalidField.reportValidity();
+            }
+            return false;
         }
-        return false;
+        return true;
     }
-    return true;
-}
 
     document.getElementById("btnNext").addEventListener("click", () => {
         if (!validateCurrentStep()) return;
@@ -601,7 +617,10 @@ function validateCurrentStep() {
     document.getElementById("surveyForm").addEventListener("submit", (e) => {
         if (!validateCurrentStep()) {
             e.preventDefault();
+            return;
         }
+        const elDuration = document.getElementById('sfDuration');
+        if (elDuration) elDuration.value = Math.round((Date.now() - sfStartTime) / 1000);
     });
 
     document.addEventListener("change", () => {
@@ -609,83 +628,98 @@ function validateCurrentStep() {
         updateStepView();
     });
 
-document.addEventListener("DOMContentLoaded", () => {
-    enhanceSelects();
-    applyQuestionRules();
-    updateStepView();
-});
+    document.addEventListener("DOMContentLoaded", () => {
+        enhanceSelects();
+        applyQuestionRules();
+        updateStepView();
+
+        const elDeviceId = document.getElementById('sfDeviceId');
+        if (elDeviceId) elDeviceId.value = navigator.userAgent;
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const elLat = document.getElementById('sfLatitude');
+                    const elLng = document.getElementById('sfLongitude');
+                    if (elLat) elLat.value = pos.coords.latitude;
+                    if (elLng) elLng.value = pos.coords.longitude;
+                },
+                () => { /* user nolak izin lokasi, biarin kosong */ }
+            );
+        }
+    });
 
     // ── CUSTOM SELECT (ganti dropdown native) ──
-function enhanceSelects(){
-    document.querySelectorAll('.sv-inline-box select').forEach(nativeSelect => {
-        if (nativeSelect.dataset.enhanced) return;
-        nativeSelect.dataset.enhanced = "1";
+    function enhanceSelects(){
+        document.querySelectorAll('.sv-inline-box select').forEach(nativeSelect => {
+            if (nativeSelect.dataset.enhanced) return;
+            nativeSelect.dataset.enhanced = "1";
 
-        const wrap = document.createElement('div');
-        wrap.className = 'sv-select';
+            const wrap = document.createElement('div');
+            wrap.className = 'sv-select';
 
-        const trigger = document.createElement('div');
-        trigger.className = 'sv-select__trigger';
-        trigger.tabIndex = 0;
+            const trigger = document.createElement('div');
+            trigger.className = 'sv-select__trigger';
+            trigger.tabIndex = 0;
 
-        const label = document.createElement('span');
-        const arrow = document.createElement('i');
-        arrow.className = 'bi bi-chevron-down';
-        trigger.appendChild(label);
-        trigger.appendChild(arrow);
+            const label = document.createElement('span');
+            const arrow = document.createElement('i');
+            arrow.className = 'bi bi-chevron-down';
+            trigger.appendChild(label);
+            trigger.appendChild(arrow);
 
-        const panel = document.createElement('div');
-        panel.className = 'sv-select__panel';
+            const panel = document.createElement('div');
+            panel.className = 'sv-select__panel';
 
-        function renderOptions(){
-            panel.innerHTML = '';
-            Array.from(nativeSelect.options).forEach(opt => {
-                const item = document.createElement('div');
-                item.className = 'sv-select__option' + (opt.value === nativeSelect.value ? ' selected' : '');
-                item.textContent = opt.textContent;
-item.addEventListener('click', () => {
-    nativeSelect.value = opt.value;
-    nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    syncLabel();
-    wrap.classList.remove('open');
-    wrap.classList.remove('sv-select--invalid');
-});
-                panel.appendChild(item);
+            function renderOptions(){
+                panel.innerHTML = '';
+                Array.from(nativeSelect.options).forEach(opt => {
+                    const item = document.createElement('div');
+                    item.className = 'sv-select__option' + (opt.value === nativeSelect.value ? ' selected' : '');
+                    item.textContent = opt.textContent;
+                    item.addEventListener('click', () => {
+                        nativeSelect.value = opt.value;
+                        nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        syncLabel();
+                        wrap.classList.remove('open');
+                        wrap.classList.remove('sv-select--invalid');
+                    });
+                    panel.appendChild(item);
+                });
+            }
+
+            function syncLabel(){
+                const selectedOpt = nativeSelect.options[nativeSelect.selectedIndex];
+                label.textContent = selectedOpt ? selectedOpt.textContent : '';
+                trigger.classList.toggle('placeholder', !nativeSelect.value);
+                renderOptions();
+            }
+
+            trigger.addEventListener('click', () => {
+                if (nativeSelect.disabled) return;
+                document.querySelectorAll('.sv-select.open').forEach(o => { if (o !== wrap) o.classList.remove('open'); });
+                wrap.classList.toggle('open');
             });
-        }
+            trigger.addEventListener('keydown', (e) => {
+                if (nativeSelect.disabled) return;
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger.click(); }
+                if (e.key === 'Escape') wrap.classList.remove('open');
+            });
 
-        function syncLabel(){
-            const selectedOpt = nativeSelect.options[nativeSelect.selectedIndex];
-            label.textContent = selectedOpt ? selectedOpt.textContent : '';
-            trigger.classList.toggle('placeholder', !nativeSelect.value);
-            renderOptions();
-        }
+            wrap.appendChild(trigger);
+            wrap.appendChild(panel);
+            nativeSelect.insertAdjacentElement('afterend', wrap);
 
-        trigger.addEventListener('click', () => {
-            if (nativeSelect.disabled) return;
-            document.querySelectorAll('.sv-select.open').forEach(o => { if (o !== wrap) o.classList.remove('open'); });
-            wrap.classList.toggle('open');
-        });
-        trigger.addEventListener('keydown', (e) => {
-            if (nativeSelect.disabled) return;
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger.click(); }
-            if (e.key === 'Escape') wrap.classList.remove('open');
+            syncLabel();
+            nativeSelect.addEventListener('change', syncLabel);
         });
 
-        wrap.appendChild(trigger);
-        wrap.appendChild(panel);
-        nativeSelect.insertAdjacentElement('afterend', wrap);
-
-        syncLabel();
-        nativeSelect.addEventListener('change', syncLabel);
-    });
-
-    document.addEventListener('click', (e) => {
-        document.querySelectorAll('.sv-select.open').forEach(w => {
-            if (!w.contains(e.target)) w.classList.remove('open');
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.sv-select.open').forEach(w => {
+                if (!w.contains(e.target)) w.classList.remove('open');
+            });
         });
-    });
-}
+    }
 </script>
 </body>
 </html>

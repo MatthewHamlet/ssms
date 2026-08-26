@@ -1,0 +1,161 @@
+@model SurveyFormApp.Models.SurveyFormVersion
+@{
+    ViewData["Title"] = "Kelola Pertanyaan";
+    ViewData["ActiveMenu"] = "formbuilder";
+    Layout = "_SidebarLayout";
+}
+
+<p class="sv-eyebrow">Form Builder</p>
+<h1 class="sv-title">@Model.Form.FormName <span class="text-muted">v@(Model.VersionNo)</span></h1>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+<p>
+    <span class="sv-badge @(Model.IsPublished ? "sv-badge--published" : "sv-badge--draft")">
+        @(Model.IsPublished ? "Published" : "Draft")
+    </span>
+</p>
+
+@foreach (var sec in Model.SurveySections.OrderBy(s => s.OrderNo))
+{
+    <div class="sv-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong>@sec.SectionTitle</strong>
+            <form asp-action="DeleteSection" method="post" onsubmit="return confirm('Hapus section ini beserta semua pertanyaannya?');">
+                <input type="hidden" name="sectionId" value="@sec.Id" />
+                <input type="hidden" name="versionId" value="@Model.Id" />
+                <button class="sv-btn sv-btn--danger sv-btn--sm">Hapus Section</button>
+            </form>
+        </div>
+
+        <table class="sv-table">
+            <thead><tr><th>#</th><th>Pertanyaan</th><th>Tipe</th><th>Wajib</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
+            {
+                <tr>
+                    <td>@q.OrderNo</td>
+                    <td>
+                        @q.QuestionText
+                        @if (q.SurveyQuestionOptions.Any())
+                        {
+                            <div class="small text-muted">Opsi: @string.Join(", ", q.SurveyQuestionOptions.OrderBy(o => o.OrderNo).Select(o => o.OptionLabel))</div>
+                        }
+                    </td>
+                    <td>@q.QuestionType</td>
+                    <td>@(q.IsRequired ? "Ya" : "Tidak")</td>
+                    <td class="text-nowrap">
+                        <a asp-action="EditQuestion" asp-route-id="@q.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Edit</a>
+                        <form asp-action="DeleteQuestion" method="post" style="display:inline" onsubmit="return confirm('Hapus pertanyaan ini?');">
+                            <input type="hidden" name="questionId" value="@q.Id" />
+                            <input type="hidden" name="versionId" value="@Model.Id" />
+                            <button class="sv-btn sv-btn--danger sv-btn--sm">Hapus</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+<details class="mt-3">
+    <summary class="sv-btn sv-btn--ghost sv-btn--sm">+ Tambah Pertanyaan</summary>
+    <form asp-action="AddQuestion" method="post" class="row g-2 mt-2 align-items-start">
+        <input type="hidden" name="sectionId" value="@sec.Id" />
+        <input type="hidden" name="versionId" value="@Model.Id" />
+
+        <div class="col-md-3">
+            <label class="form-label">Kode Pertanyaan <span class="text-danger">*harus unik</span></label>
+            <input name="questionCode" class="form-control" placeholder="cth: Q_NAMA_DEBITUR" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Teks Pertanyaan</label>
+            <input name="questionText" class="form-control" placeholder="Nama lengkap debitur?" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Tipe Jawaban</label>
+            <select name="questionType" class="form-select sv-question-type" data-target="opts-@sec.Id">
+                <option value="text">Text</option>
+                <option value="textarea">Textarea</option>
+                <option value="number">Number</option>
+                <option value="date">Date</option>
+                <option value="dropdown">Dropdown</option>
+                <option value="boolean">Boolean</option>
+                <option value="photo">Photo</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Urutan</label>
+            <input type="number" name="orderNo" class="form-control" value="0" title="Boleh sama, cuma nentuin urutan tampil" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label d-block">&nbsp;</label>
+            <div class="form-check pt-2">
+                <input type="checkbox" name="isRequired" value="true" class="form-check-input" id="req-@sec.Id" />
+                <label class="form-check-label" for="req-@sec.Id">Wajib diisi</label>
+            </div>
+        </div>
+
+        <div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
+            <label class="form-label">Opsi Dropdown</label>
+            <input name="optionsRaw" class="form-control" placeholder="Label1:Value1, Label2:Value2" />
+            <small class="text-muted">Isi cuma kalau Tipe Jawaban = Dropdown</small>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Teks Bantuan (opsional)</label>
+            <input name="helpText" class="form-control" placeholder="Muncul di bawah field, buat panduan surveyor" />
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="sv-btn sv-btn--primary sv-btn--sm">Simpan Pertanyaan</button>
+        </div>
+    </form>
+</details>
+    </div>
+}
+
+<div class="sv-card">
+    <strong class="d-block mb-3">+ Tambah Section Baru</strong>
+    <form asp-action="AddSection" method="post" class="row g-2">
+        <input type="hidden" name="versionId" value="@Model.Id" />
+        <div class="col-md-3"><input name="sectionCode" class="form-control" placeholder="Kode Section" required /></div>
+        <div class="col-md-6"><input name="sectionTitle" class="form-control" placeholder="Judul Section" required /></div>
+        <div class="col-md-2"><input type="number" name="orderNo" class="form-control" value="@(Model.SurveySections.Count)" /></div>
+        <div class="col-md-1"><button type="submit" class="sv-btn sv-btn--primary">Tambah</button></div>
+    </form>
+</div>
+
+<div class="mt-3">
+    <a asp-action="Versions" asp-route-formId="@Model.FormId" class="sv-btn sv-btn--ghost">Kembali ke Daftar Versi</a>
+    @if (!Model.IsPublished)
+    {
+        <form asp-action="Publish" method="post" style="display:inline">
+            <input type="hidden" name="versionId" value="@Model.Id" />
+            <button type="submit" class="sv-btn sv-btn--submit">Publish Form Ini</button>
+        </form>
+    }
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function toggleOptsField(select) {
+        var targetId = select.dataset.target;
+        var target = document.getElementById(targetId);
+        if (!target) return;
+        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    }
+
+    document.querySelectorAll('.sv-question-type').forEach(function (select) {
+        toggleOptsField(select); // set posisi awal
+        select.addEventListener('change', function () {
+            toggleOptsField(select);
+        });
+    });
+});
+</script>
+}

@@ -1,0 +1,29 @@
+@model List<SurveyFormApp.Models.SurveyForm>
+@{
+    ViewData["Title"] = "Form Builder";
+    ViewData["ActiveMenu"] = "formbuilder";
+    Layout = "_SidebarLayout";
+}
+
+<p class="sv-eyebrow">Form Builder</p>
+<h1 class="sv-title">Daftar Form</h1>
+
+<a asp-action="CreateForm" class="sv-btn sv-btn--primary mb-3">+ Buat Form Baru</a>
+
+<div class="sv-card">
+    <table class="sv-table">
+        <thead><tr><th>Kode</th><th>Nama</th><th>Tipe Produk</th><th>Jml Versi</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var f in Model)
+        {
+            <tr>
+                <td>@f.FormCode</td>
+                <td>@f.FormName</td>
+                <td>@f.ProductType</td>
+                <td>@f.SurveyFormVersions.Count</td>
+                <td><a asp-action="Versions" asp-route-formId="@f.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Kelola Versi</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

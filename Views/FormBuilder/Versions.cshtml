@@ -1,0 +1,45 @@
+@model SurveyFormApp.Models.SurveyForm
+@{
+    ViewData["Title"] = "Versi Form";
+    ViewData["ActiveMenu"] = "formbuilder";
+    Layout = "_SidebarLayout";
+}
+
+<p class="sv-eyebrow">Form Builder</p>
+<h1 class="sv-title">Versi Form: @Model.FormName</h1>
+
+<form asp-action="NewVersion" method="post" class="mb-3">
+    <input type="hidden" name="formId" value="@Model.Id" />
+    <button type="submit" class="sv-btn sv-btn--submit">+ Buat Versi Baru</button>
+</form>
+
+<div class="sv-card">
+    <table class="sv-table">
+        <thead><tr><th>Versi</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var v in Model.SurveyFormVersions.OrderByDescending(v => v.VersionNo))
+        {
+            <tr>
+                <td>v@(v.VersionNo)</td>
+                <td>
+                    <span class="sv-badge @(v.IsPublished ? "sv-badge--published" : "sv-badge--draft")">
+                        @(v.IsPublished ? "Published" : "Draft")
+                    </span>
+                </td>
+                <td class="text-nowrap">
+                    <a asp-action="Manage" asp-route-versionId="@v.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Kelola Pertanyaan</a>
+                    @if (!v.IsPublished)
+                    {
+                        <form asp-action="Publish" method="post" style="display:inline">
+                            <input type="hidden" name="versionId" value="@v.Id" />
+                            <button type="submit" class="sv-btn sv-btn--primary sv-btn--sm">Publish</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<a asp-action="Index" class="sv-btn sv-btn--ghost">Kembali</a>

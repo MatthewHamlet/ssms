@@ -1,0 +1,98 @@
+@model SurveyFormApp.Models.SurveyQuestion
+@{
+    ViewData["Title"] = "Edit Pertanyaan";
+    ViewData["ActiveMenu"] = "formbuilder";
+    Layout = "_SidebarLayout";
+    long versionId = ViewBag.VersionId;
+    string optionsRaw = ViewBag.OptionsRaw;
+}
+
+<p class="sv-eyebrow">Form Builder</p>
+<h1 class="sv-title">Edit Pertanyaan</h1>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="sv-card">
+    <form asp-action="EditQuestion" method="post" class="row g-3">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="hidden" name="versionId" value="@versionId" />
+
+<div class="col-md-4">
+    <label class="form-label">Kode Pertanyaan <span class="text-danger">*harus unik</span></label>
+    <input name="questionCode" class="form-control" value="@Model.QuestionCode" required />
+</div>
+<div class="col-md-8">
+    <label class="form-label">Teks Pertanyaan</label>
+    <input name="questionText" class="form-control" value="@Model.QuestionText" required />
+</div>
+
+<div class="col-md-3">
+    <label class="form-label">Tipe Jawaban</label>
+    <select name="questionType" class="form-select sv-question-type" data-target="opts-edit">
+        @foreach (var t in new[] { "text", "textarea", "number", "date", "dropdown", "boolean", "photo" })
+        {
+            <option value="@t" selected="@(Model.QuestionType == t)">@t</option>
+        }
+    </select>
+</div>
+<div class="col-md-2">
+    <label class="form-label">Urutan</label>
+    <input type="number" name="orderNo" class="form-control" value="@Model.OrderNo" title="Boleh sama, cuma nentuin urutan" />
+</div>
+<div class="col-md-3">
+    <label class="form-label d-block">&nbsp;</label>
+    <div class="form-check pt-2">
+        <input type="checkbox" name="isRequired" value="true" class="form-check-input" id="editReq"
+               checked="@Model.IsRequired" />
+        <label class="form-check-label" for="editReq">Wajib diisi</label>
+    </div>
+</div>
+
+<div class="col-md-6" id="opts-edit" style="display:none;">
+    <label class="form-label">Opsi Dropdown (Label:Value, ...)</label>
+    <input name="optionsRaw" class="form-control" value="@optionsRaw" placeholder="Lancar:LANCAR, Macet:MACET" />
+</div>
+        <div class="col-md-6">
+            <label class="form-label">Teks Bantuan</label>
+            <input name="helpText" class="form-control" value="@Model.HelpText" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Min Value</label>
+            <input type="number" step="any" name="minValue" class="form-control" value="@Model.MinValue" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Max Value</label>
+            <input type="number" step="any" name="maxValue" class="form-control" value="@Model.MaxValue" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Max Length</label>
+            <input type="number" name="maxLength" class="form-control" value="@Model.MaxLength" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Placeholder</label>
+            <input name="placeholder" class="form-control" value="@Model.Placeholder" />
+        </div>
+
+        <div class="col-12 mt-2">
+            <button type="submit" class="sv-btn sv-btn--primary">Simpan Perubahan</button>
+            <a asp-action="Manage" asp-route-versionId="@versionId" class="sv-btn sv-btn--ghost">Batal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var select = document.querySelector('.sv-question-type');
+    var target = document.getElementById('opts-edit');
+    function toggle() {
+        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    }
+    toggle();
+    select.addEventListener('change', toggle);
+});
+</script>
+}
