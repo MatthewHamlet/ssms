@@ -32,10 +32,10 @@
 body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:14px;line-height:1.5;overflow-x:hidden}
 
 :root{
-  --sf-purple:#2e1065;
-  --sf-purple-2:#3b1a7a;
-  --sf-gold:#facc15;
-  --sf-gold-dark:#d97706;
+  --sf-purple:#0A2540;
+  --sf-purple-2:#1a3a5c;
+  --sf-gold:#00C9B1;
+  --sf-gold-dark:#00a896;
   --sidebar-w:264px;
   --sidebar-col:72px;
   --topbar-h:64px;
@@ -48,6 +48,45 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
   --shadow-sm:0 1px 4px rgba(0,0,0,.06);
   --shadow-md:0 4px 16px rgba(0,0,0,.08);
   --ease:cubic-bezier(.4,0,.2,1);
+}
+
+.sv-inline-box select{display:none;}
+
+.sv-select{position:relative;flex:1 1 auto;min-width:0;}
+.sv-select__trigger{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;cursor:pointer;font-size:14.5px;color:var(--ink);
+  user-select:none;outline:none;
+}
+.sv-select__trigger.placeholder{color:var(--ink-faint);}
+.sv-select__trigger i{font-size:11px;color:var(--ink-faint);transition:.15s;flex-shrink:0;margin-left:10px;}
+.sv-select.open .sv-select__trigger i{transform:rotate(180deg);color:var(--purple);}
+.sv-select.disabled .sv-select__trigger{opacity:.5;cursor:not-allowed;pointer-events:none;}
+
+.sv-select__panel{
+  position:absolute;top:calc(100% + 8px);left:-14px;right:-14px;
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-md);padding:6px;z-index:50;
+  max-height:240px;overflow-y:auto;
+  opacity:0;transform:translateY(-6px);pointer-events:none;
+  transition:.15s var(--ease);
+}
+.sv-select.open .sv-select__panel{opacity:1;transform:translateY(0);pointer-events:auto;}
+
+.sv-select__option{
+  padding:10px 12px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer;
+}
+.sv-select__option:hover{background:var(--purple-tint);}
+.sv-select__option.selected{background:var(--purple);color:#fff;font-weight:600;}
+.sv-select--invalid .sv-select__trigger{
+  animation:sfShake .4s;
+  border-radius:8px;
+  box-shadow:0 0 0 2px var(--danger);
+}
+@@keyframes sfShake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-4px);}
+  75%{transform:translateX(4px);}
 }
 
 /* ═══════ SIDEBAR ═══════ */
@@ -73,7 +112,7 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
   width:36px;height:36px;border-radius:10px;flex-shrink:0;
   background:var(--sf-gold);
   display:flex;align-items:center;justify-content:center;
-  font-size:15px;font-weight:800;color:#1f2937;
+  font-size:15px;font-weight:800;color:#fff;
 }
 .sf-logo-text{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px;transition:opacity .2s;}
 .sf-logo-text em{color:var(--sf-gold);font-style:normal;}
@@ -98,7 +137,7 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
 }
 .sf-item:hover{background:rgba(255,255,255,.08);color:#fff;}
 .sf-item.active{
-  background:rgba(250,204,21,.15);
+  background:rgba(0,201,177,.15);
   color:var(--sf-gold);font-weight:700;
 }
 .sf-item.active::before{
@@ -115,7 +154,7 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
   width:34px;height:34px;border-radius:50%;flex-shrink:0;
   background:var(--sf-gold);
   display:flex;align-items:center;justify-content:center;
-  color:#1f2937;font-weight:800;font-size:12px;
+  color:#fff;font-weight:800;font-size:12px;
 }
 .sf-uname{color:#fff;font-size:13px;font-weight:700;}
 .sf-urole{color:rgba(255,255,255,.45);font-size:11px;}
@@ -232,8 +271,8 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
 <!-- ═══════ SIDEBAR ═══════ -->
 <nav id="sfSidebar">
   <div class="sf-logo">
-    <div class="sf-logo-icon">SF</div>
-    <span class="sf-logo-text">Survey<em>Form</em></span>
+    <div class="sf-logo-icon">FM</div>
+    <span class="sf-logo-text">Fiscus<em>Multifinance</em></span>
   </div>
   <div class="sf-scroll">
     <div class="sf-section">Menu</div>
@@ -502,10 +541,13 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
             const isActive = idx === currentStep;
             step.classList.toggle("active", isActive);
 
-            step.querySelectorAll("input, select, textarea").forEach(inp => {
-                const ruleHidden = inp.dataset.ruleHidden === "1";
-                inp.disabled = !isActive || ruleHidden;
-            });
+step.querySelectorAll("input, select, textarea").forEach(inp => {
+    const ruleHidden = inp.dataset.ruleHidden === "1";
+    inp.disabled = !isActive || ruleHidden;
+    if (inp.tagName === 'SELECT' && inp.nextElementSibling?.classList.contains('sv-select')) {
+        inp.nextElementSibling.classList.toggle('disabled', inp.disabled);
+    }
+});
         });
 
         document.getElementById("btnPrev").disabled = currentStep === 0;
@@ -515,17 +557,27 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
         renderStepper();
     }
 
-    function validateCurrentStep() {
-        const step = steps[currentStep];
-        const invalidField = Array.from(step.querySelectorAll("input, select, textarea"))
-            .find(inp => !inp.disabled && !inp.checkValidity());
+function validateCurrentStep() {
+    const step = steps[currentStep];
+    const invalidField = Array.from(step.querySelectorAll("input, select, textarea"))
+        .find(inp => !inp.disabled && !inp.checkValidity());
 
-        if (invalidField) {
+    if (invalidField) {
+        const customWrap = invalidField.tagName === 'SELECT' ? invalidField.nextElementSibling : null;
+
+        if (customWrap && customWrap.classList.contains('sv-select')) {
+            customWrap.classList.remove('sv-select--invalid');
+            void customWrap.offsetWidth; // reset animasi biar bisa retrigger
+            customWrap.classList.add('sv-select--invalid');
+            customWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            customWrap.querySelector('.sv-select__trigger').focus();
+        } else {
             invalidField.reportValidity();
-            return false;
         }
-        return true;
+        return false;
     }
+    return true;
+}
 
     document.getElementById("btnNext").addEventListener("click", () => {
         if (!validateCurrentStep()) return;
@@ -557,10 +609,83 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
         updateStepView();
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
-        applyQuestionRules();
-        updateStepView();
+document.addEventListener("DOMContentLoaded", () => {
+    enhanceSelects();
+    applyQuestionRules();
+    updateStepView();
+});
+
+    // ── CUSTOM SELECT (ganti dropdown native) ──
+function enhanceSelects(){
+    document.querySelectorAll('.sv-inline-box select').forEach(nativeSelect => {
+        if (nativeSelect.dataset.enhanced) return;
+        nativeSelect.dataset.enhanced = "1";
+
+        const wrap = document.createElement('div');
+        wrap.className = 'sv-select';
+
+        const trigger = document.createElement('div');
+        trigger.className = 'sv-select__trigger';
+        trigger.tabIndex = 0;
+
+        const label = document.createElement('span');
+        const arrow = document.createElement('i');
+        arrow.className = 'bi bi-chevron-down';
+        trigger.appendChild(label);
+        trigger.appendChild(arrow);
+
+        const panel = document.createElement('div');
+        panel.className = 'sv-select__panel';
+
+        function renderOptions(){
+            panel.innerHTML = '';
+            Array.from(nativeSelect.options).forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'sv-select__option' + (opt.value === nativeSelect.value ? ' selected' : '');
+                item.textContent = opt.textContent;
+item.addEventListener('click', () => {
+    nativeSelect.value = opt.value;
+    nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    syncLabel();
+    wrap.classList.remove('open');
+    wrap.classList.remove('sv-select--invalid');
+});
+                panel.appendChild(item);
+            });
+        }
+
+        function syncLabel(){
+            const selectedOpt = nativeSelect.options[nativeSelect.selectedIndex];
+            label.textContent = selectedOpt ? selectedOpt.textContent : '';
+            trigger.classList.toggle('placeholder', !nativeSelect.value);
+            renderOptions();
+        }
+
+        trigger.addEventListener('click', () => {
+            if (nativeSelect.disabled) return;
+            document.querySelectorAll('.sv-select.open').forEach(o => { if (o !== wrap) o.classList.remove('open'); });
+            wrap.classList.toggle('open');
+        });
+        trigger.addEventListener('keydown', (e) => {
+            if (nativeSelect.disabled) return;
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger.click(); }
+            if (e.key === 'Escape') wrap.classList.remove('open');
+        });
+
+        wrap.appendChild(trigger);
+        wrap.appendChild(panel);
+        nativeSelect.insertAdjacentElement('afterend', wrap);
+
+        syncLabel();
+        nativeSelect.addEventListener('change', syncLabel);
     });
+
+    document.addEventListener('click', (e) => {
+        document.querySelectorAll('.sv-select.open').forEach(w => {
+            if (!w.contains(e.target)) w.classList.remove('open');
+        });
+    });
+}
 </script>
 </body>
 </html>
