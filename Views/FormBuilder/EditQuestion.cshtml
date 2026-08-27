@@ -51,8 +51,13 @@
 </div>
 
 <div class="col-md-6" id="opts-edit" style="display:none;">
-    <label class="form-label">Opsi Dropdown (Label:Value, ...)</label>
-    <input name="optionsRaw" class="form-control" value="@optionsRaw" placeholder="Lancar:LANCAR, Macet:MACET" />
+    <label class="form-label">Opsi Dropdown</label>
+    <div class="sv-tag-input" data-tag-target="optsRaw-edit">
+        <div class="sv-tag-list"></div>
+        <input type="text" class="sv-tag-typer" placeholder="Ketik lalu tekan Space/Enter...">
+    </div>
+    <input type="hidden" name="optionsRaw" id="optsRaw-edit" value="@optionsRaw" />
+    <small class="text-muted">Ketik label opsi, tekan Space/Enter buat jadi tag. Hapus pakai tombol ×.</small>
 </div>
         <div class="col-md-6">
             <label class="form-label">Teks Bantuan</label>
@@ -93,6 +98,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     toggle();
     select.addEventListener('change', toggle);
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    var select = document.querySelector('.sv-question-type');
+    var target = document.getElementById('opts-edit');
+    function toggle() {
+        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    }
+    toggle();
+    select.addEventListener('change', toggle);
+
+    initAllTagInputs();
 });
 </script>
 }

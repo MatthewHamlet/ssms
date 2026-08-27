@@ -97,6 +97,13 @@ body{font-family:'Inter',sans-serif;background:#EEF2F7;color:#111827;font-size:1
 .sf-label{font-size:13.5px;transition:opacity .2s;flex:1;}
 #sfSidebar.collapsed .sf-label{opacity:0;width:0;}
 
+.sv-tag-input{border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#fff;cursor:text;}
+.sv-tag-input:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-tint);}
+.sv-tag-chip{display:inline-flex;align-items:center;gap:4px;background:var(--purple-tint);color:var(--purple);font-size:13px;font-weight:600;padding:5px 6px 5px 12px;border-radius:20px;white-space:nowrap;}
+.sv-tag-remove{border:none;background:transparent;color:var(--purple);font-size:16px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:50%;}
+.sv-tag-remove:hover{background:var(--purple);color:#fff;}
+.sv-tag-typer{border:none;outline:none;flex:1 1 140px;font-size:14px;padding:4px 2px;min-width:140px;background:transparent;}
+
 .sf-footer{padding:14px 10px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
 .sf-user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;white-space:nowrap;overflow:hidden;}
 .sf-avatar{

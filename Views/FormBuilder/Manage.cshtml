@@ -5,6 +5,20 @@
     Layout = "_SidebarLayout";
 }
 
+@section Styles {
+<style>
+.sv-section-card{position:relative;}
+.sv-section-header{
+  position:sticky;
+  top:var(--topbar-h);
+  z-index:400;
+  background:#fff;
+  padding:6px 0;
+  margin:-6px 0 12px;
+}
+</style>
+}
+
 <p class="sv-eyebrow">Form Builder</p>
 <h1 class="sv-title">@Model.Form.FormName <span class="text-muted">v@(Model.VersionNo)</span></h1>
 @if (TempData["Error"] != null)
@@ -23,15 +37,20 @@
 
 @foreach (var sec in Model.SurveySections.OrderBy(s => s.OrderNo))
 {
-    <div class="sv-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <strong>@sec.SectionTitle</strong>
-            <form asp-action="DeleteSection" method="post" onsubmit="return confirm('Hapus section ini beserta semua pertanyaannya?');">
+<div class="sv-card sv-section-card">
+    <div class="sv-section-header d-flex justify-content-between align-items-center">
+        <strong>@sec.SectionTitle</strong>
+        <div class="d-flex gap-2">
+            <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-toggle-add" data-target="addq-@sec.Id">
+                + Tambah Pertanyaan
+            </button>
+            <form asp-action="DeleteSection" method="post" onsubmit="return confirm('Hapus section ini beserta semua pertanyaannya?');" class="d-inline">
                 <input type="hidden" name="sectionId" value="@sec.Id" />
                 <input type="hidden" name="versionId" value="@Model.Id" />
                 <button class="sv-btn sv-btn--danger sv-btn--sm">Hapus Section</button>
             </form>
         </div>
+    </div>
 
         <table class="sv-table">
             <thead><tr><th>#</th><th>Pertanyaan</th><th>Tipe</th><th>Wajib</th><th></th></tr></thead>
@@ -62,8 +81,7 @@
             </tbody>
         </table>
 
-<details class="mt-3">
-    <summary class="sv-btn sv-btn--ghost sv-btn--sm">+ Tambah Pertanyaan</summary>
+<div class="mt-3 sv-add-question-panel" id="addq-@sec.Id" style="display:none;">
     <form asp-action="AddQuestion" method="post" class="row g-2 mt-2 align-items-start">
         <input type="hidden" name="sectionId" value="@sec.Id" />
         <input type="hidden" name="versionId" value="@Model.Id" />
@@ -100,11 +118,15 @@
             </div>
         </div>
 
-        <div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
-            <label class="form-label">Opsi Dropdown</label>
-            <input name="optionsRaw" class="form-control" placeholder="Label1:Value1, Label2:Value2" />
-            <small class="text-muted">Isi cuma kalau Tipe Jawaban = Dropdown</small>
-        </div>
+<div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
+    <label class="form-label">Opsi Dropdown</label>
+    <div class="sv-tag-input" data-tag-target="optsRaw-@sec.Id">
+        <div class="sv-tag-list"></div>
+        <input type="text" class="sv-tag-typer" placeholder="Ketik lalu tekan Space/Enter...">
+    </div>
+    <input type="hidden" name="optionsRaw" id="optsRaw-@sec.Id" />
+    <small class="text-muted">Ketik label opsi (misal: Lancar), tekan Space atau Enter buat jadi tag. Hapus pakai tombol ×.</small>
+</div>
         <div class="col-md-6">
             <label class="form-label">Teks Bantuan (opsional)</label>
             <input name="helpText" class="form-control" placeholder="Muncul di bawah field, buat panduan surveyor" />
@@ -114,7 +136,7 @@
             <button type="submit" class="sv-btn sv-btn--primary sv-btn--sm">Simpan Pertanyaan</button>
         </div>
     </form>
-</details>
+</div>
     </div>
 }
 
@@ -151,11 +173,125 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.querySelectorAll('.sv-question-type').forEach(function (select) {
+        toggleOptsField(select);
+        select.addEventListener('change', function () {
+            toggleOptsField(select);
+        });
+    });
+
+    // toggle panel tambah pertanyaan
+    document.querySelectorAll('.sv-toggle-add').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var panel = document.getElementById(btn.dataset.target);
+            if (!panel) return;
+            var isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : '';
+            btn.textContent = isOpen ? '+ Tambah Pertanyaan' : '- Tutup Form';
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    function toggleOptsField(select) {
+        var targetId = select.dataset.target;
+        var target = document.getElementById(targetId);
+        if (!target) return;
+        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    }
+
+    document.querySelectorAll('.sv-question-type').forEach(function (select) {
         toggleOptsField(select); // set posisi awal
         select.addEventListener('change', function () {
             toggleOptsField(select);
         });
     });
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    function toggleOptsField(select) {
+        var targetId = select.dataset.target;
+        var target = document.getElementById(targetId);
+        if (!target) return;
+        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    }
+
+    document.querySelectorAll('.sv-question-type').forEach(function (select) {
+        toggleOptsField(select);
+        select.addEventListener('change', function () {
+            toggleOptsField(select);
+        });
+    });
+
+    initAllTagInputs();
+});
+
+function initAllTagInputs() {
+    document.querySelectorAll('.sv-tag-input').forEach(function (container) {
+        if (container.dataset.tagInit) return;
+        container.dataset.tagInit = "1";
+        initTagInput(container);
+    });
+}
+
+function initTagInput(container) {
+    var list = container.querySelector('.sv-tag-list');
+    var typer = container.querySelector('.sv-tag-typer');
+    var hidden = document.getElementById(container.dataset.tagTarget);
+    var tags = [];
+
+    if (hidden.value) {
+        tags = hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        render();
+    }
+
+    function render() {
+        list.innerHTML = '';
+        tags.forEach(function (tag, idx) {
+            var labelText = tag.split(':')[0];
+            var chip = document.createElement('span');
+            chip.className = 'sv-tag-chip';
+
+            var text = document.createElement('span');
+            text.textContent = labelText;
+            chip.appendChild(text);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sv-tag-remove';
+            btn.innerHTML = '&times;';
+            btn.addEventListener('click', function () {
+                tags.splice(idx, 1);
+                render();
+            });
+            chip.appendChild(btn);
+
+            list.appendChild(chip);
+        });
+        hidden.value = tags.join(', ');
+    }
+
+    function commit() {
+        var val = typer.value.trim();
+        if (!val) return;
+        tags.push(val);
+        typer.value = '';
+        render();
+    }
+
+    typer.addEventListener('keydown', function (e) {
+        if (e.key === ' ' || e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            commit();
+        }
+        // backspace pas kosong sengaja gak ngapus tag — harus klik tombol ×
+    });
+
+    typer.addEventListener('blur', commit);
+
+    container.addEventListener('click', function (e) {
+        if (e.target === container || e.target === list) typer.focus();
+    });
+}
+
 </script>
 }
