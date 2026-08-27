@@ -7,6 +7,31 @@
     string optionsRaw = ViewBag.OptionsRaw;
 }
 
+@section Styles {
+<style>
+.sv-option-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
+.sv-option-header{
+  display:flex;gap:8px;align-items:center;margin-bottom:6px;
+}
+.sv-option-header .sv-opt-header-label,
+.sv-option-header .sv-opt-header-value{
+  flex:1 1 0;min-width:0;font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);
+}
+.sv-option-header .sv-opt-header-spacer{flex:0 0 auto;width:22px;}
+.sv-option-header .sv-opt-header-spacer-end{flex:0 0 auto;width:32px;}
+.sv-option-row{display:flex;gap:8px;align-items:center;}
+.sv-option-row .sv-opt-label,
+.sv-option-row .sv-opt-value{flex:1 1 0;min-width:0;}
+.sv-opt-remove{
+  flex:0 0 auto;width:32px;height:32px;border:1px solid var(--border);background:#fff;
+  border-radius:8px;color:var(--danger);font-size:16px;cursor:pointer;line-height:1;
+}
+.sv-opt-remove:hover{background:#fef2f2;border-color:#f3c2c2;}
+.sv-add-option{margin-top:2px;}
+</style>
+}
+
 <p class="sv-eyebrow">Form Builder</p>
 <h1 class="sv-title">Edit Pertanyaan</h1>
 @if (TempData["Error"] != null)
@@ -30,10 +55,10 @@
 
 <div class="col-md-3">
     <label class="form-label">Tipe Jawaban</label>
-    <select name="questionType" class="form-select sv-question-type" data-target="opts-edit">
+    <select name="questionType" class="form-select sv-question-type" data-target="opts-edit" data-current-type="@Model.QuestionType">
         @foreach (var t in new[] { "text", "textarea", "number", "date", "dropdown", "boolean", "photo" })
         {
-            <option value="@t" selected="@(Model.QuestionType == t)">@t</option>
+            <option value="@t" selected="@(string.Equals(Model.QuestionType?.Trim(), t, StringComparison.OrdinalIgnoreCase))">@t</option>
         }
     </select>
 </div>
@@ -52,12 +77,18 @@
 
 <div class="col-md-6" id="opts-edit" style="display:none;">
     <label class="form-label">Opsi Dropdown</label>
-    <div class="sv-tag-input" data-tag-target="optsRaw-edit">
-        <div class="sv-tag-list"></div>
-        <input type="text" class="sv-tag-typer" placeholder="Ketik lalu tekan Space/Enter...">
+    <div class="sv-option-header">
+        <span class="sv-opt-header-spacer"></span>
+        <span class="sv-opt-header-label">Label</span>
+        <span class="sv-opt-header-value">Value</span>
+        <span class="sv-opt-header-spacer-end"></span>
     </div>
+    <div class="sv-option-rows" id="optrows-edit" data-target="optsRaw-edit"></div>
+    <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-add-option" data-rows="optrows-edit">+ Tambah Opsi</button>
     <input type="hidden" name="optionsRaw" id="optsRaw-edit" value="@optionsRaw" />
-    <small class="text-muted">Ketik label opsi, tekan Space/Enter buat jadi tag. Hapus pakai tombol ×.</small>
+    <small class="text-muted d-block mt-1">
+        <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
+    </small>
 </div>
         <div class="col-md-6">
             <label class="form-label">Teks Bantuan</label>
@@ -76,6 +107,10 @@
             <label class="form-label">Max Length</label>
             <input type="number" name="maxLength" class="form-control" value="@Model.MaxLength" />
         </div>
+        <div class="col-md-6">
+    <label class="form-label">Validation Regex (opsional)</label>
+    <input type="text" name="validationRegex" class="form-control" value="@Model.ValidationRegex" placeholder="cth: ^[0-9]{10}$" />
+</div>
         <div class="col-md-3">
             <label class="form-label">Placeholder</label>
             <input name="placeholder" class="form-control" value="@Model.Placeholder" />
@@ -93,23 +128,102 @@
 document.addEventListener('DOMContentLoaded', function () {
     var select = document.querySelector('.sv-question-type');
     var target = document.getElementById('opts-edit');
+
+    // fallback: paksa value select sesuai tipe pertanyaan saat ini
+    var currentType = (select.dataset.currentType || '').trim().toLowerCase();
+    var hasMatch = Array.from(select.options).some(function (opt) {
+        return opt.value.toLowerCase() === currentType;
+    });
+    if (hasMatch) {
+        select.value = currentType;
+    }
+
     function toggle() {
         target.style.display = select.value === 'dropdown' ? '' : 'none';
     }
     toggle();
     select.addEventListener('change', toggle);
+
+    initAllOptionRows();
 });
 
-document.addEventListener('DOMContentLoaded', function () {
-    var select = document.querySelector('.sv-question-type');
-    var target = document.getElementById('opts-edit');
-    function toggle() {
-        target.style.display = select.value === 'dropdown' ? '' : 'none';
+function initAllOptionRows() {
+    document.querySelectorAll('.sv-option-rows').forEach(function (container) {
+        if (container.dataset.init) return;
+        container.dataset.init = "1";
+        initOptionRows(container);
+    });
+}
+
+function initOptionRows(container) {
+    var hidden = document.getElementById(container.dataset.target);
+    var addBtn = document.querySelector('.sv-add-option[data-rows="' + container.id + '"]');
+
+    function sync() {
+        var pairs = [];
+        container.querySelectorAll('.sv-option-row').forEach(function (row) {
+            var label = row.querySelector('.sv-opt-label').value.trim();
+            var value = row.querySelector('.sv-opt-value').value.trim();
+            if (!label && !value) return;
+            pairs.push(label + ':' + (value || label));
+        });
+        hidden.value = pairs.join(', ');
     }
-    toggle();
-    select.addEventListener('change', toggle);
 
-    initAllTagInputs();
+    function addRow(label, value) {
+        var row = document.createElement('div');
+        row.className = 'sv-option-row';
+
+        var labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'form-control sv-opt-label';
+        labelInput.placeholder = 'Label (tampil di form)';
+        labelInput.value = label || '';
+
+        var valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'form-control sv-opt-value';
+        valueInput.placeholder = 'Value (disimpan ke DB)';
+        valueInput.value = value || '';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'sv-opt-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Hapus opsi';
+removeBtn.addEventListener('click', function () {
+    var label = row.querySelector('.sv-opt-label').value.trim();
+    var value = row.querySelector('.sv-opt-value').value.trim();
+    var desc = label || value ? `"${label || value}"` : 'opsi ini';
+    if (!confirm('Hapus ' + desc + '?')) return;
+    row.remove();
+    sync();
 });
+
+        labelInput.addEventListener('input', sync);
+        valueInput.addEventListener('input', sync);
+
+        row.appendChild(labelInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+        container.appendChild(row);
+    }
+
+    // prepopulate kalau hidden field sudah ada isi (mode edit)
+    if (hidden.value) {
+        hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
+            var parts = pair.split(':');
+            addRow(parts[0], parts.length > 1 ? parts[1] : parts[0]);
+        });
+        sync();
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            addRow('', '');
+            sync();
+        });
+    }
+}
 </script>
 }

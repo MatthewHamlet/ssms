@@ -5,16 +5,48 @@
     Layout = "_SidebarLayout";
 }
 
+@section Styles {
+<style>
+.sv-sticky-block{
+  position:sticky;
+  top:var(--topbar-h);
+  z-index:401;
+  background:#EEF2F7;
+  padding-top:10px;
+  margin-top:-10px;
+}
+.sv-response-info.sv-card{
+  margin-bottom:0;
+  border-bottom-left-radius:0;
+  border-bottom-right-radius:0;
+  box-shadow:var(--shadow-md);
+}
+.sv-answers-card{
+  margin-top:0;
+  border-top-left-radius:0;
+  border-top-right-radius:0;
+}
+.sv-answers-card table.sv-table thead th{
+  position:sticky;
+  z-index:400;
+  background:#fff;
+  top:0; /* di-override oleh JS jadi tinggi kartu info yang sebenarnya */
+}
+</style>
+}
+
 <p class="sv-eyebrow">Daftar Jawaban</p>
 <h1 class="sv-title">Detail Jawaban</h1>
 
-<div class="sv-card">
-    <p><strong>Form:</strong> @Model.Assignment?.FormVersion?.Form?.FormName</p>
-    <p><strong>Surveyor:</strong> @Model.SurveyorId</p>
-    <p><strong>Waktu Submit:</strong> @Model.SubmittedAt</p>
+<div class="sv-sticky-block">
+    <div class="sv-card sv-response-info" id="svResponseInfo">
+        <p><strong>Form:</strong> @Model.Assignment?.FormVersion?.Form?.FormName</p>
+        <p><strong>Surveyor:</strong> @Model.SurveyorId</p>
+        <p><strong>Waktu Submit:</strong> @Model.SubmittedAt</p>
+    </div>
 </div>
 
-<div class="sv-card">
+<div class="sv-card sv-answers-card">
     <table class="sv-table">
         <thead>
             <tr><th>Section</th><th>Pertanyaan</th><th>Jawaban</th><th></th></tr>
@@ -40,4 +72,27 @@
     </table>
 </div>
 
-<a asp-action="Responses" class="sv-btn sv-btn--ghost">Kembali ke Daftar Jawaban</a>
+<a asp-action="Responses" class="sv-btn sv-btn--ghost mt-3">Kembali ke Daftar Jawaban</a>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function positionStickyHeader() {
+        var infoCard = document.getElementById('svResponseInfo');
+        var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
+        if (!infoCard || !thead) return;
+
+        var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
+        var infoHeight = infoCard.offsetHeight;
+        var stickyTop = topbarH + infoHeight;
+
+        document.querySelectorAll('.sv-answers-card table.sv-table thead th').forEach(function (th) {
+            th.style.top = stickyTop + 'px';
+        });
+    }
+
+    positionStickyHeader();
+    window.addEventListener('resize', positionStickyHeader);
+});
+</script>
+}

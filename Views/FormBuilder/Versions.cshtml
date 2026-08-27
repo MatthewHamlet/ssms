@@ -8,10 +8,19 @@
 <p class="sv-eyebrow">Form Builder</p>
 <h1 class="sv-title">Versi Form: @Model.FormName</h1>
 
-<form asp-action="NewVersion" method="post" class="mb-3">
+<form asp-action="NewVersion" method="post" class="mb-3" onsubmit="return confirm('Buat versi baru dari form ini? Versi baru akan dibuat sebagai draft.');">
     <input type="hidden" name="formId" value="@Model.Id" />
     <button type="submit" class="sv-btn sv-btn--submit">+ Buat Versi Baru</button>
 </form>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
 
 <div class="sv-card">
     <table class="sv-table">
@@ -26,16 +35,21 @@
                         @(v.IsPublished ? "Published" : "Draft")
                     </span>
                 </td>
-                <td class="text-nowrap">
-                    <a asp-action="Manage" asp-route-versionId="@v.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Kelola Pertanyaan</a>
-                    @if (!v.IsPublished)
-                    {
-                        <form asp-action="Publish" method="post" style="display:inline">
-                            <input type="hidden" name="versionId" value="@v.Id" />
-                            <button type="submit" class="sv-btn sv-btn--primary sv-btn--sm">Publish</button>
-                        </form>
-                    }
-                </td>
+<td class="text-nowrap">
+    <a asp-action="Manage" asp-route-versionId="@v.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Kelola Pertanyaan</a>
+    @if (!v.IsPublished)
+    {
+        <form asp-action="Publish" method="post" style="display:inline" onsubmit="return confirm('Publish versi ini? Versi lain yang sedang published akan otomatis di-unpublish.');">
+            <input type="hidden" name="versionId" value="@v.Id" />
+            <button type="submit" class="sv-btn sv-btn--primary sv-btn--sm">Publish</button>
+        </form>
+        <form asp-action="DeleteVersion" method="post" style="display:inline" onsubmit="return confirm('Hapus versi v@(v.VersionNo) beserta seluruh section dan pertanyaannya? Tindakan ini tidak bisa dibatalkan.');">
+            <input type="hidden" name="versionId" value="@v.Id" />
+            <input type="hidden" name="formId" value="@Model.Id" />
+            <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">Hapus</button>
+        </form>
+    }
+</td>
             </tr>
         }
         </tbody>

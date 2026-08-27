@@ -16,6 +16,42 @@
   padding:6px 0;
   margin:-6px 0 12px;
 }
+.sv-option-rows{
+  display:flex;flex-direction:column;gap:8px;margin-bottom:8px;
+  max-height:150px; /* ~3 baris sebelum discroll */
+  overflow-y:auto;
+  padding-right:4px;
+}
+.sv-option-header{
+  display:flex;gap:8px;align-items:center;margin-bottom:6px;
+}
+.sv-option-header .sv-opt-header-label,
+.sv-option-header .sv-opt-header-value{
+  flex:1 1 0;min-width:0;font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);
+}
+.sv-option-header .sv-opt-header-spacer{flex:0 0 auto;width:22px;}
+.sv-option-header .sv-opt-header-spacer-end{flex:0 0 auto;width:32px;}
+.sv-option-rows::-webkit-scrollbar{width:6px;}
+.sv-option-rows::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
+.sv-option-row{
+  display:flex;gap:8px;align-items:center;background:#fff;
+}
+.sv-option-row.dragging{opacity:.4;}
+.sv-opt-handle{
+  flex:0 0 auto;width:22px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:grab;color:var(--ink-faint);font-size:14px;
+}
+.sv-opt-handle:active{cursor:grabbing;}
+.sv-option-row .sv-opt-label,
+.sv-option-row .sv-opt-value{flex:1 1 0;min-width:0;}
+.sv-opt-remove{
+  flex:0 0 auto;width:32px;height:32px;border:1px solid var(--border);background:#fff;
+  border-radius:8px;color:var(--danger);font-size:16px;cursor:pointer;line-height:1;
+}
+.sv-opt-remove:hover{background:#fef2f2;border-color:#f3c2c2;}
+.sv-add-option{margin-top:2px;}
+.sv-optional-box{background:#fafbfc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
 </style>
 }
 
@@ -117,19 +153,49 @@
                 <label class="form-check-label" for="req-@sec.Id">Wajib diisi</label>
             </div>
         </div>
-
 <div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
     <label class="form-label">Opsi Dropdown</label>
-    <div class="sv-tag-input" data-tag-target="optsRaw-@sec.Id">
-        <div class="sv-tag-list"></div>
-        <input type="text" class="sv-tag-typer" placeholder="Ketik lalu tekan Space/Enter...">
+    <div class="sv-option-header">
+        <span class="sv-opt-header-spacer"></span>
+        <span class="sv-opt-header-label">Label</span>
+        <span class="sv-opt-header-value">Value</span>
+        <span class="sv-opt-header-spacer-end"></span>
     </div>
+    <div class="sv-option-rows" id="optrows-@sec.Id" data-target="optsRaw-@sec.Id"></div>
+    <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-add-option" data-rows="optrows-@sec.Id">+ Tambah Opsi</button>
     <input type="hidden" name="optionsRaw" id="optsRaw-@sec.Id" />
-    <small class="text-muted">Ketik label opsi (misal: Lancar), tekan Space atau Enter buat jadi tag. Hapus pakai tombol ×.</small>
+    <small class="text-muted d-block mt-1">
+        <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
+    </small>
 </div>
+
         <div class="col-md-6">
             <label class="form-label">Teks Bantuan (opsional)</label>
             <input name="helpText" class="form-control" placeholder="Muncul di bawah field, buat panduan surveyor" />
+        </div>
+
+        <div class="col-12">
+            <div class="sv-optional-box">
+                <small class="text-muted d-block mb-2">Opsional — batasan &amp; validasi jawaban:</small>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Min Value</label>
+                        <input type="number" step="any" name="minValue" class="form-control" placeholder="cth: 0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Max Value</label>
+                        <input type="number" step="any" name="maxValue" class="form-control" placeholder="cth: 100" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Max Length</label>
+                        <input type="number" name="maxLength" class="form-control" placeholder="cth: 200" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Validation Regex</label>
+                        <input type="text" name="validationRegex" class="form-control" placeholder="cth: ^[0-9]+$" />
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-12">
@@ -155,10 +221,10 @@
     <a asp-action="Versions" asp-route-formId="@Model.FormId" class="sv-btn sv-btn--ghost">Kembali ke Daftar Versi</a>
     @if (!Model.IsPublished)
     {
-        <form asp-action="Publish" method="post" style="display:inline">
-            <input type="hidden" name="versionId" value="@Model.Id" />
-            <button type="submit" class="sv-btn sv-btn--submit">Publish Form Ini</button>
-        </form>
+<form asp-action="Publish" method="post" style="display:inline" onsubmit="return confirm('Publish versi ini? Versi lain yang sedang published akan otomatis di-unpublish.');">
+    <input type="hidden" name="versionId" value="@Model.Id" />
+    <button type="submit" class="sv-btn sv-btn--submit">Publish Form Ini</button>
+</form>
     }
 </div>
 
@@ -189,109 +255,210 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.textContent = isOpen ? '+ Tambah Pertanyaan' : '- Tutup Form';
         });
     });
+
+    initAllOptionRows();
 });
 
-document.addEventListener('DOMContentLoaded', function () {
-    function toggleOptsField(select) {
-        var targetId = select.dataset.target;
-        var target = document.getElementById(targetId);
-        if (!target) return;
-        target.style.display = select.value === 'dropdown' ? '' : 'none';
-    }
-
-    document.querySelectorAll('.sv-question-type').forEach(function (select) {
-        toggleOptsField(select); // set posisi awal
-        select.addEventListener('change', function () {
-            toggleOptsField(select);
-        });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    function toggleOptsField(select) {
-        var targetId = select.dataset.target;
-        var target = document.getElementById(targetId);
-        if (!target) return;
-        target.style.display = select.value === 'dropdown' ? '' : 'none';
-    }
-
-    document.querySelectorAll('.sv-question-type').forEach(function (select) {
-        toggleOptsField(select);
-        select.addEventListener('change', function () {
-            toggleOptsField(select);
-        });
-    });
-
-    initAllTagInputs();
-});
-
-function initAllTagInputs() {
-    document.querySelectorAll('.sv-tag-input').forEach(function (container) {
-        if (container.dataset.tagInit) return;
-        container.dataset.tagInit = "1";
-        initTagInput(container);
+function initAllOptionRows() {
+    document.querySelectorAll('.sv-option-rows').forEach(function (container) {
+        if (container.dataset.init) return;
+        container.dataset.init = "1";
+        initOptionRows(container);
     });
 }
 
-function initTagInput(container) {
-    var list = container.querySelector('.sv-tag-list');
-    var typer = container.querySelector('.sv-tag-typer');
-    var hidden = document.getElementById(container.dataset.tagTarget);
-    var tags = [];
+function initAllOptionRows() {
+    document.querySelectorAll('.sv-option-rows').forEach(function (container) {
+        if (container.dataset.init) return;
+        container.dataset.init = "1";
+        initOptionRows(container);
+    });
+}
 
-    if (hidden.value) {
-        tags = hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-        render();
-    }
+function initOptionRows(container) {
+    var hidden = document.getElementById(container.dataset.target);
+    var addBtn = document.querySelector('.sv-add-option[data-rows="' + container.id + '"]');
+    var draggedRow = null;
 
-    function render() {
-        list.innerHTML = '';
-        tags.forEach(function (tag, idx) {
-            var labelText = tag.split(':')[0];
-            var chip = document.createElement('span');
-            chip.className = 'sv-tag-chip';
-
-            var text = document.createElement('span');
-            text.textContent = labelText;
-            chip.appendChild(text);
-
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'sv-tag-remove';
-            btn.innerHTML = '&times;';
-            btn.addEventListener('click', function () {
-                tags.splice(idx, 1);
-                render();
-            });
-            chip.appendChild(btn);
-
-            list.appendChild(chip);
+    function sync() {
+        var pairs = [];
+        container.querySelectorAll('.sv-option-row').forEach(function (row) {
+            var label = row.querySelector('.sv-opt-label').value.trim();
+            var value = row.querySelector('.sv-opt-value').value.trim();
+            if (!label && !value) return;
+            pairs.push(label + ':' + (value || label));
         });
-        hidden.value = tags.join(', ');
+        hidden.value = pairs.join(', ');
     }
 
-    function commit() {
-        var val = typer.value.trim();
-        if (!val) return;
-        tags.push(val);
-        typer.value = '';
-        render();
+    function getDragAfterElement(y) {
+        var rows = Array.from(container.querySelectorAll('.sv-option-row:not(.dragging)'));
+        return rows.reduce(function (closest, child) {
+            var box = child.getBoundingClientRect();
+            var offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            }
+            return closest;
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    typer.addEventListener('keydown', function (e) {
-        if (e.key === ' ' || e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            commit();
+    function attachDrag(row) {
+        var handle = row.querySelector('.sv-opt-handle');
+        row.draggable = false;
+
+        // hanya bisa mulai drag dari ikon handle, biar teks di input tetap bisa diseleksi normal
+        handle.addEventListener('mousedown', function () {
+            row.draggable = true;
+        });
+
+        row.addEventListener('dragstart', function (e) {
+            draggedRow = row;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        row.addEventListener('dragend', function () {
+            row.classList.remove('dragging');
+            row.draggable = false;
+            draggedRow = null;
+            sync();
+        });
+    }
+
+    container.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!draggedRow) return;
+        var afterElement = getDragAfterElement(e.clientY);
+        if (afterElement == null) {
+            container.appendChild(draggedRow);
+        } else {
+            container.insertBefore(draggedRow, afterElement);
         }
-        // backspace pas kosong sengaja gak ngapus tag — harus klik tombol ×
     });
 
-    typer.addEventListener('blur', commit);
+    function addRow(label, value) {
+        var row = document.createElement('div');
+        row.className = 'sv-option-row';
 
-    container.addEventListener('click', function (e) {
-        if (e.target === container || e.target === list) typer.focus();
-    });
+        var handle = document.createElement('span');
+        handle.className = 'sv-opt-handle';
+        handle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+
+        var labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'form-control sv-opt-label';
+        labelInput.placeholder = 'Label (tampil di form)';
+        labelInput.value = label || '';
+
+        var valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'form-control sv-opt-value';
+        valueInput.placeholder = 'Value (disimpan ke DB)';
+        valueInput.value = value || '';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'sv-opt-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Hapus opsi';
+        removeBtn.addEventListener('click', function () {
+            row.remove();
+            sync();
+        });
+
+        labelInput.addEventListener('input', sync);
+        valueInput.addEventListener('input', sync);
+
+        row.appendChild(handle);
+        row.appendChild(labelInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+
+        attachDrag(row);
+        container.appendChild(row);
+    }
+
+    // prepopulate kalau hidden field sudah ada isi (mode edit)
+    if (hidden.value) {
+        hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
+            var parts = pair.split(':');
+            addRow(parts[0], parts.length > 1 ? parts[1] : parts[0]);
+        });
+        sync();
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            addRow('', '');
+            sync();
+        });
+    }
+}   
+    var hidden = document.getElementById(container.dataset.target);
+    var addBtn = document.querySelector('.sv-add-option[data-rows="' + container.id + '"]');
+
+    function sync() {
+        var pairs = [];
+        container.querySelectorAll('.sv-option-row').forEach(function (row) {
+            var label = row.querySelector('.sv-opt-label').value.trim();
+            var value = row.querySelector('.sv-opt-value').value.trim();
+            if (!label && !value) return;
+            pairs.push(label + ':' + (value || label));
+        });
+        hidden.value = pairs.join(', ');
+    }
+
+    function addRow(label, value) {
+        var row = document.createElement('div');
+        row.className = 'sv-option-row';
+
+        var labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'form-control sv-opt-label';
+        labelInput.placeholder = 'Label (tampil di form)';
+        labelInput.value = label || '';
+
+        var valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'form-control sv-opt-value';
+        valueInput.placeholder = 'Value (disimpan ke DB)';
+        valueInput.value = value || '';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'sv-opt-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Hapus opsi';
+        removeBtn.addEventListener('click', function () {
+            row.remove();
+            sync();
+        });
+
+        labelInput.addEventListener('input', sync);
+        valueInput.addEventListener('input', sync);
+
+        row.appendChild(labelInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+        container.appendChild(row);
+    }
+
+    // prepopulate kalau hidden field sudah ada isi (mode edit)
+    if (hidden.value) {
+        hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
+            var parts = pair.split(':');
+            addRow(parts[0], parts.length > 1 ? parts[1] : parts[0]);
+        });
+        sync();
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            addRow('', '');
+            sync();
+        });
+    }
 }
-
 </script>
 }
