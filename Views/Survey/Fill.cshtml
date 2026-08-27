@@ -23,7 +23,30 @@
 
 @section Styles {
 <style>
-.sv-inline-box select{display:none;}
+.sv-inline-box select{display:none !important;}
+
+.sv-inline-box select:not([data-enhanced]){
+  display:block !important;
+  flex:1 1 auto;
+  min-width:0;
+  font-family:inherit;
+  font-size:14.5px;
+  color:var(--ink);
+  background-color:#fff !important;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%236b7280' d='M8 11 3 6h10z'/%3e%3c/svg%3e");
+  background-repeat:no-repeat;
+  background-position:right 2px center;
+  background-size:14px;
+  border:none;
+  outline:none;
+  padding:0 22px 0 0;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  cursor:pointer;
+}
+.sv-inline-box select:not([data-enhanced])::-ms-expand{display:none;}
+.sv-inline-box select:not([data-enhanced]) option{color:var(--ink);background:#fff;}
 
 .sv-select{position:relative;flex:1 1 auto;min-width:0;}
 .sv-select__trigger{
@@ -31,8 +54,7 @@
   width:100%;cursor:pointer;font-size:14.5px;color:var(--ink);
   user-select:none;outline:none;
 }
-.sv-select__trigger.placeholder{color:var(--ink-faint);}
-.sv-select__trigger i{font-size:11px;color:var(--ink-faint);transition:.15s;flex-shrink:0;margin-left:10px;}
+.sv-select__trigger.is-empty{font-size:11px;color:var(--ink-faint);transition:.15s;flex-shrink:0;margin-left:10px;}
 .sv-select.open .sv-select__trigger i{transform:rotate(180deg);color:var(--purple);}
 .sv-select.disabled .sv-select__trigger{opacity:.5;cursor:not-allowed;pointer-events:none;}
 
@@ -461,9 +483,10 @@
         }
     });
 
-    function enhanceSelects(){
-        document.querySelectorAll('.sv-inline-box select').forEach(nativeSelect => {
-            if (nativeSelect.dataset.enhanced) return;
+function enhanceSelects(){
+    document.querySelectorAll('.sv-inline-box select').forEach(nativeSelect => {
+        if (nativeSelect.dataset.enhanced) return;
+        try {
             nativeSelect.dataset.enhanced = "1";
 
             const wrap = document.createElement('div');
@@ -502,7 +525,7 @@
             function syncLabel(){
                 const selectedOpt = nativeSelect.options[nativeSelect.selectedIndex];
                 label.textContent = selectedOpt ? selectedOpt.textContent : '';
-                trigger.classList.toggle('placeholder', !nativeSelect.value);
+                trigger.classList.toggle('is-empty', !nativeSelect.value);
                 renderOptions();
             }
 
@@ -521,15 +544,20 @@
             wrap.appendChild(panel);
             nativeSelect.insertAdjacentElement('afterend', wrap);
 
+            nativeSelect.setAttribute('data-enhanced', '1');
             syncLabel();
             nativeSelect.addEventListener('change', syncLabel);
-        });
+        } catch (err) {
+            console.error('Gagal enhance select:', nativeSelect.name, err);
+            nativeSelect.style.display = '';
+        }
+    });
 
-        document.addEventListener('click', (e) => {
-            document.querySelectorAll('.sv-select.open').forEach(w => {
-                if (!w.contains(e.target)) w.classList.remove('open');
-            });
+    document.addEventListener('click', (e) => {
+        document.querySelectorAll('.sv-select.open').forEach(w => {
+            if (!w.contains(e.target)) w.classList.remove('open');
         });
-    }
+    });
+}
 </script>
 }
