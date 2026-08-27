@@ -160,19 +160,36 @@ public class FormBuilderController : Controller
         return RedirectToAction(nameof(Manage), new { versionId });
     }
 
-    // POST: /FormBuilder/DeleteSection
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteSection(long sectionId, long versionId)
+// POST: /FormBuilder/DeleteSection
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> DeleteSection(long sectionId, long versionId)
+{
+    var section = await _context.SurveySections
+        .Include(s => s.SurveyQuestions)
+        .FirstOrDefaultAsync(s => s.Id == sectionId);
+
+    if (section == null) return RedirectToAction(nameof(Manage), new { versionId });
+
+    if (section.SurveyQuestions.Any())
     {
-        var section = await _context.SurveySections.FindAsync(sectionId);
-        if (section != null)
-        {
-            _context.SurveySections.Remove(section);
-            await _context.SaveChangesAsync();
-        }
+        TempData["Error"] = "Section ini tidak bisa dihapus karena masih ada pertanyaan di dalamnya. Hapus semua pertanyaan di section ini dulu.";
         return RedirectToAction(nameof(Manage), new { versionId });
     }
+
+    try
+    {
+        _context.SurveySections.Remove(section);
+        await _context.SaveChangesAsync();
+        TempData["Success"] = "Section berhasil dihapus.";
+    }
+    catch (DbUpdateException)
+    {
+        TempData["Error"] = "Section ini tidak bisa dihapus karena masih punya data terkait.";
+    }
+
+    return RedirectToAction(nameof(Manage), new { versionId });
+}
 
     // POST: /FormBuilder/AddQuestion
     [HttpPost]
@@ -356,19 +373,27 @@ public class FormBuilderController : Controller
         return RedirectToAction(nameof(Manage), new { versionId });
     }
 
-    // POST: /FormBuilder/DeleteQuestion
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteQuestion(long questionId, long versionId)
+// POST: /FormBuilder/DeleteQuestion
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> DeleteQuestion(long questionId, long versionId)
+{
+    var question = await _context.SurveyQuestions.FindAsync(questionId);
+    if (question == null) return RedirectToAction(nameof(Manage), new { versionId });
+
+    try
     {
-        var question = await _context.SurveyQuestions.FindAsync(questionId);
-        if (question != null)
-        {
-            _context.SurveyQuestions.Remove(question);
-            await _context.SaveChangesAsync();
-        }
-        return RedirectToAction(nameof(Manage), new { versionId });
+        _context.SurveyQuestions.Remove(question);
+        await _context.SaveChangesAsync();
+        TempData["Success"] = "Pertanyaan berhasil dihapus.";
     }
+    catch (DbUpdateException)
+    {
+        TempData["Error"] = "Pertanyaan ini tidak bisa dihapus karena masih punya data terkait (jawaban survey atau aturan/rule pertanyaan lain yang bergantung padanya). Hapus data terkait dulu sebelum menghapus pertanyaan ini.";
+    }
+
+    return RedirectToAction(nameof(Manage), new { versionId });
+}
 
     // POST: /FormBuilder/ReorderQuestions -> dipanggil via fetch pas drag & drop selesai
     [HttpPost]

@@ -10,6 +10,48 @@
 .sv-cond-field{transition:none;}
 .sv-cond-field[hidden]{display:none !important;}
 
+.sv-section-nav__input{
+  width:34px;text-align:center;border:1px solid var(--border);border-radius:6px;
+  font-size:13.5px;font-weight:700;color:var(--ink);padding:4px 2px;
+  -moz-appearance:textfield;
+}
+.sv-section-nav__input::-webkit-outer-spin-button,
+.sv-section-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.sv-section-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
+
+.sv-section-nav{
+  display:flex;align-items:center;gap:10px;
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  padding:6px 10px;flex:0 0 auto;
+}
+.sv-section-nav__btn{
+  width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+  background:#f8fafc;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:.15s;
+}
+.sv-section-nav__btn:hover:not(:disabled){border-color:var(--sf-purple);color:var(--sf-purple);}
+.sv-section-nav__btn:disabled{opacity:.35;cursor:not-allowed;}
+.sv-section-nav__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;min-width:150px;text-align:center;}
+
+.sv-section-page{display:none;}
+.sv-section-page.active{display:block;}
+
+.sv-question-scroll{
+  max-height:520px; /* kira-kira cukup buat ~10 baris, sesuaikan kalau perlu */
+  overflow-y:auto;
+  border-radius:8px;
+}
+.sv-question-scroll::-webkit-scrollbar{width:8px;}
+.sv-question-scroll::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px;}
+.sv-question-scroll::-webkit-scrollbar-track{background:transparent;}
+
+.sv-question-scroll table.sv-table thead th{
+  position:sticky;
+  top:0;
+  z-index:5;
+  background:#fff;
+}
+
 .sv-section-card{position:relative;}
 .sv-section-header{
   position:sticky;
@@ -56,6 +98,18 @@
 .sv-add-option{margin-top:2px;}
 .sv-optional-box{background:#fafbfc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
 
+.sv-savebar{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(140%);
+  background:#111827;color:#fff;padding:14px 20px;border-radius:12px;
+  display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-md);
+  z-index:2000;transition:transform .25s var(--ease);
+}
+.sv-savebar.show{transform:translateX(-50%) translateY(0);}
+.sv-savebar__text{font-size:13.5px;font-weight:600;white-space:nowrap;}
+.sv-savebar .sv-btn--save{background:var(--sf-gold);color:#0f172a;}
+.sv-savebar .sv-btn--cancel{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;}
+.sv-savebar .sv-btn--cancel:hover{background:rgba(255,255,255,.08);}
+
 /* drag & drop pertanyaan */
 .sv-drag-col{width:34px;}
 .sv-drag-handle{
@@ -70,7 +124,25 @@
 }
 
 <p class="sv-eyebrow">Form Builder</p>
-<h1 class="sv-title">@Model.Form.FormName <span class="text-muted">v@(Model.VersionNo)</span></h1>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="sv-title mb-0">@Model.Form.FormName <span class="text-muted">v@(Model.VersionNo)</span></h1>
+    @if (Model.SurveySections.Any())
+    {
+        <div class="sv-section-nav" id="sectionNav">
+            <button type="button" class="sv-section-nav__btn" id="btnSectionPrev" title="Section sebelumnya">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+<span class="sv-section-nav__label">
+    Section
+    <input type="number" class="sv-section-nav__input" id="sectionNavInput" min="1" max="@Model.SurveySections.Count" value="1" />
+    dari @Model.SurveySections.Count
+</span>
+            <button type="button" class="sv-section-nav__btn" id="btnSectionNext" title="Section selanjutnya">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    }
+</div>
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger">@TempData["Error"]</div>
@@ -85,9 +157,10 @@
     </span>
 </p>
 
+@{ int secIndex = 0; }
 @foreach (var sec in Model.SurveySections.OrderBy(s => s.OrderNo))
 {
-<div class="sv-card sv-section-card">
+<div class="sv-card sv-section-card sv-section-page @(secIndex == 0 ? "active" : "")" data-section-id="@sec.Id">
     <div class="sv-section-header d-flex justify-content-between align-items-center">
         <strong>@sec.SectionTitle</strong>
         <div class="d-flex gap-2">
@@ -102,36 +175,39 @@
         </div>
     </div>
 
-        <table class="sv-table">
-            <thead><tr><th class="sv-drag-col"></th><th>#</th><th>Pertanyaan</th><th>Tipe</th><th>Wajib</th><th></th></tr></thead>
-            <tbody class="js-question-tbody" data-section-id="@sec.Id">
-            @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
-            {
-                <tr data-question-id="@q.Id">
-                    <td class="sv-drag-col"><span class="sv-drag-handle" title="Geser buat urutin"><i class="bi bi-grip-vertical"></i></span></td>
-                    <td class="sv-order-no">@q.OrderNo</td>
-                    <td>
-                        @q.QuestionText
-                        @if (q.SurveyQuestionOptions.Any())
-                        {
-                            <div class="small text-muted">Opsi: @string.Join(", ", q.SurveyQuestionOptions.OrderBy(o => o.OrderNo).Select(o => o.OptionLabel))</div>
-                        }
-                    </td>
-                    <td>@q.QuestionType</td>
-                    <td>@(q.IsRequired ? "Ya" : "Tidak")</td>
-                    <td class="text-nowrap">
-                        <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm js-edit-question" data-question-id="@q.Id">Edit</button>
-                        <form asp-action="DeleteQuestion" method="post" style="display:inline" onsubmit="return confirm('Hapus pertanyaan ini?');">
-                            <input type="hidden" name="questionId" value="@q.Id" />
-                            <input type="hidden" name="versionId" value="@Model.Id" />
-                            <button class="sv-btn sv-btn--danger sv-btn--sm">Hapus</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
+        <div class="sv-question-scroll">
+            <table class="sv-table">
+                <thead><tr><th class="sv-drag-col"></th><th>#</th><th>Pertanyaan</th><th>Tipe</th><th>Wajib</th><th></th></tr></thead>
+                <tbody class="js-question-tbody" data-section-id="@sec.Id">
+                @foreach (var q in sec.SurveyQuestions.OrderBy(q => q.OrderNo))
+                {
+                    <tr data-question-id="@q.Id">
+                        <td class="sv-drag-col"><span class="sv-drag-handle" title="Geser buat urutin"><i class="bi bi-grip-vertical"></i></span></td>
+                        <td class="sv-order-no">@q.OrderNo</td>
+                        <td>
+                            @q.QuestionText
+                            @if (q.SurveyQuestionOptions.Any())
+                            {
+                                <div class="small text-muted">Opsi: @string.Join(", ", q.SurveyQuestionOptions.OrderBy(o => o.OrderNo).Select(o => o.OptionLabel))</div>
+                            }
+                        </td>
+                        <td>@q.QuestionType</td>
+                        <td>@(q.IsRequired ? "Ya" : "Tidak")</td>
+                        <td class="text-nowrap">
+                            <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm js-edit-question" data-question-id="@q.Id">Edit</button>
+                            <form asp-action="DeleteQuestion" method="post" style="display:inline" onsubmit="return confirm('Hapus pertanyaan ini?');">
+                                <input type="hidden" name="questionId" value="@q.Id" />
+                                <input type="hidden" name="versionId" value="@Model.Id" />
+                                <button class="sv-btn sv-btn--danger sv-btn--sm">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
     </div>
+secIndex++;
 }
 
 <div class="sv-card">
@@ -143,6 +219,12 @@
         <div class="col-md-2"><input type="number" name="orderNo" class="form-control" value="@(Model.SurveySections.Count)" /></div>
         <div class="col-md-1"><button type="submit" class="sv-btn sv-btn--primary">Tambah</button></div>
     </form>
+</div>
+
+<div class="sv-savebar" id="svSaveBar">
+    <span class="sv-savebar__text">Ada perubahan urutan pertanyaan yang belum disimpan</span>
+    <button type="button" class="sv-btn sv-btn--save sv-btn--sm" id="btnSaveOrder">Simpan Urutan</button>
+    <button type="button" class="sv-btn sv-btn--cancel sv-btn--sm" id="btnCancelOrder">Batal</button>
 </div>
 
 <div class="mt-3">
@@ -278,17 +360,34 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.sv-question-type').forEach(function (select) {
-        updateConditionalFields(select);
-        select.addEventListener('change', function () {
-            updateConditionalFields(select);
-        });
-    });
+    try { initSectionPager(); } catch (e) { console.error('initSectionPager error:', e); }
 
-    initAllOptionRows();
-    initSortableTables();
-    initAddQuestionButtons();
-    initEditQuestionButtons();
+    try {
+        document.querySelectorAll('.sv-question-type').forEach(function (select) {
+            updateConditionalFields(select);
+            select.addEventListener('change', function () {
+                updateConditionalFields(select);
+            });
+        });
+    } catch (e) { console.error('question-type error:', e); }
+
+    try { initAllOptionRows(); } catch (e) { console.error('initAllOptionRows error:', e); }
+    try { captureOriginalOrders(); } catch (e) { console.error('captureOriginalOrders error:', e); }
+    try { initSortableTables(); } catch (e) { console.error('initSortableTables error:', e); }
+    try { initAddQuestionButtons(); } catch (e) { console.error('initAddQuestionButtons error:', e); }
+    try { initEditQuestionButtons(); } catch (e) { console.error('initEditQuestionButtons error:', e); }
+
+    try {
+        var btnSave = document.getElementById('btnSaveOrder');
+        if (btnSave) btnSave.addEventListener('click', saveOrderChanges);
+        var btnCancel = document.getElementById('btnCancelOrder');
+        if (btnCancel) btnCancel.addEventListener('click', cancelOrderChanges);
+    } catch (e) { console.error('save/cancel order buttons error:', e); }
+
+    try {
+        attachUnsavedChangesGuard('addQuestionModal');
+        attachUnsavedChangesGuard('editQuestionModal');
+    } catch (e) { console.error('attachUnsavedChangesGuard error:', e); }
 });
 
 function updateConditionalFields(select) {
@@ -509,6 +608,27 @@ function initEditModalForm() {
     initAllOptionRows();
 }
 
+let originalOrders = {};
+let dirtySections = new Set();
+
+function captureOriginalOrders() {
+    document.querySelectorAll('.js-question-tbody').forEach(function (tbody) {
+        var sectionId = tbody.dataset.sectionId;
+        originalOrders[sectionId] = Array.from(tbody.querySelectorAll('tr[data-question-id]'))
+            .map(function (tr) { return tr.dataset.questionId; });
+    });
+}
+
+function renumberRows(tbody) {
+    Array.from(tbody.querySelectorAll('tr[data-question-id]')).forEach(function (tr, idx) {
+        var cell = tr.querySelector('.sv-order-no');
+        if (cell) cell.textContent = idx;
+    });
+}
+
+function showSaveBar() { document.getElementById('svSaveBar').classList.add('show'); }
+function hideSaveBar() { document.getElementById('svSaveBar').classList.remove('show'); }
+
 function initSortableTables() {
     document.querySelectorAll('.js-question-tbody').forEach(function (tbody) {
         new Sortable(tbody, {
@@ -517,27 +637,129 @@ function initSortableTables() {
             ghostClass: 'sv-row-ghost',
             dragClass: 'sv-row-drag',
             onEnd: function () {
+                // Urutan baru cuma diubah di layar dulu, belum dikirim ke server.
                 var sectionId = tbody.dataset.sectionId;
-                var rows = Array.from(tbody.querySelectorAll('tr[data-question-id]'));
-                var ids = rows.map(function (tr) { return parseInt(tr.dataset.questionId, 10); });
-
-                rows.forEach(function (tr, idx) {
-                    var cell = tr.querySelector('.sv-order-no');
-                    if (cell) cell.textContent = idx;
-                });
-
-                fetch('/FormBuilder/ReorderQuestions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sectionId: parseInt(sectionId, 10), questionIds: ids })
-                }).then(function (res) {
-                    if (!res.ok) throw new Error();
-                }).catch(function () {
-                    alert('Gagal menyimpan urutan pertanyaan. Coba refresh halaman lalu ulangi.');
-                });
+                renumberRows(tbody);
+                dirtySections.add(sectionId);
+                showSaveBar();
             }
         });
     });
 }
+
+function saveOrderChanges() {
+    var btn = document.getElementById('btnSaveOrder');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    var requests = Array.from(dirtySections).map(function (sectionId) {
+        var tbody = document.querySelector('.js-question-tbody[data-section-id="' + sectionId + '"]');
+        var ids = Array.from(tbody.querySelectorAll('tr[data-question-id]'))
+            .map(function (tr) { return parseInt(tr.dataset.questionId, 10); });
+
+        return fetch('/FormBuilder/ReorderQuestions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sectionId: parseInt(sectionId, 10), questionIds: ids })
+        }).then(function (res) {
+            if (!res.ok) throw new Error();
+            originalOrders[sectionId] = ids.map(String);
+        });
+    });
+
+    Promise.all(requests).then(function () {
+        dirtySections.clear();
+        hideSaveBar();
+        btn.disabled = false;
+        btn.textContent = 'Simpan Urutan';
+    }).catch(function () {
+        btn.disabled = false;
+        btn.textContent = 'Simpan Urutan';
+        alert('Gagal menyimpan urutan pertanyaan. Coba refresh halaman lalu ulangi.');
+    });
+}
+
+function initSectionPager() {
+    var pages = Array.from(document.querySelectorAll('.sv-section-page'));
+    var nav = document.getElementById('sectionNav');
+    var input = document.getElementById('sectionNavInput');
+    var btnPrev = document.getElementById('btnSectionPrev');
+    var btnNext = document.getElementById('btnSectionNext');
+
+    if (pages.length === 0 || !nav || !input || !btnPrev || !btnNext) {
+        console.warn('Section pager: elemen tidak lengkap, cek markup sectionNav/sv-section-page.');
+        return;
+    }
+
+    var storageKey = 'sv-active-section-@Model.Id';
+    var savedSectionId = sessionStorage.getItem(storageKey);
+    var current = pages.findIndex(function (p) { return p.dataset.sectionId === savedSectionId; });
+    if (current < 0) current = 0;
+
+    function render() {
+        pages.forEach(function (p, i) {
+            p.classList.toggle('active', i === current);
+        });
+        input.value = current + 1;
+        btnPrev.disabled = current === 0;
+        btnNext.disabled = current === pages.length - 1;
+        sessionStorage.setItem(storageKey, pages[current].dataset.sectionId);
+    }
+
+    function goToInputValue() {
+        var target = parseInt(input.value, 10);
+        if (isNaN(target)) { render(); return; } // balikin ke angka valid kalau kosong/bukan angka
+
+        // batasi supaya gak keluar dari range 1..jumlah section
+        target = Math.max(1, Math.min(pages.length, target));
+        current = target - 1;
+        render();
+    }
+
+    btnPrev.addEventListener('click', function () {
+        if (current > 0) { current--; render(); }
+    });
+    btnNext.addEventListener('click', function () {
+        if (current < pages.length - 1) { current++; render(); }
+    });
+
+    // Pindah pas user tekan Enter
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            goToInputValue();
+            input.blur();
+        }
+    });
+
+    input.addEventListener('blur', goToInputValue);
+
+    render();
+}
+
+function cancelOrderChanges() {
+    if (dirtySections.size === 0) return;
+    if (!confirm('Yakin batalkan perubahan urutan pertanyaan yang belum disimpan?')) return;
+
+    dirtySections.forEach(function (sectionId) {
+        var tbody = document.querySelector('.js-question-tbody[data-section-id="' + sectionId + '"]');
+        var order = originalOrders[sectionId] || [];
+        order.forEach(function (id) {
+            var row = tbody.querySelector('tr[data-question-id="' + id + '"]');
+            if (row) tbody.appendChild(row);
+        });
+        renumberRows(tbody);
+    });
+
+    dirtySections.clear();
+    hideSaveBar();
+}
+
+window.addEventListener('beforeunload', function (e) {
+    if (dirtySections.size > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 </script>
 }

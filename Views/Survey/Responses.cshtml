@@ -7,6 +7,9 @@
 
 @section Styles {
 <style>
+    .sv-table-nav__input:disabled{
+  background:#f3f4f6;color:var(--ink-faint);cursor:not-allowed;
+}
 .sf-table-wrap{overflow-x:auto;}
 .sf-table{width:100%;border-collapse:collapse;}
 .sf-table thead th{
@@ -14,6 +17,26 @@
   letter-spacing:.04em;color:var(--ink-faint);
   padding:0 16px 12px;border-bottom:2px solid var(--border);
 }
+.sv-table-nav{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  margin:14px 0 4px;
+}
+.sv-table-nav__btn{
+  width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+  background:#f8fafc;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:.15s;
+}
+.sv-table-nav__btn:hover:not(:disabled){border-color:var(--sf-purple);color:var(--sf-purple);}
+.sv-table-nav__btn:disabled{opacity:.35;cursor:not-allowed;}
+.sv-table-nav__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+.sv-table-nav__input{
+  width:34px;text-align:center;border:1px solid var(--border);border-radius:6px;
+  font-size:13.5px;font-weight:700;color:var(--ink);padding:4px 2px;
+  -moz-appearance:textfield;
+}
+.sv-table-nav__input::-webkit-outer-spin-button,
+.sv-table-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.sv-table-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
 .sf-table tbody td{
   padding:16px;border-bottom:1px solid var(--border);
   font-size:14.5px;color:var(--ink);vertical-align:middle;
@@ -60,12 +83,19 @@
 <div class="sv-card">
     @if (Model != null && Model.Count > 0)
     {
+        <div class="sv-table-nav" id="responsesNav">
+    <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
+    <span class="sv-table-nav__label">
+        Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
+    </span>
+    <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
+</div>
         <div class="sf-table-wrap">
             <table class="sf-table">
                 <thead>
                     <tr><th>Form</th><th>Surveyor</th><th>Status</th><th>Waktu Submit</th><th></th></tr>
                 </thead>
-                <tbody>
+                <tbody id="responsesTbody">
                     @foreach (var r in Model)
                     {
                         var statusClass = (r.Status?.ToUpper()) switch
@@ -98,4 +128,12 @@
             Belum ada jawaban survey yang masuk.
         </div>
     }
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    initTablePager({ tbodySelector: '#responsesTbody', navId: 'responsesNav', pageSize: 10 });
+});
+</script>
+}
 </div>

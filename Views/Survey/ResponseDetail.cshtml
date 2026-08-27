@@ -26,11 +26,44 @@
   border-top-left-radius:0;
   border-top-right-radius:0;
 }
+
+/* Nav sekarang jadi baris header tabel, bukan ngambang di luar card */
+.sv-answers-header{
+  position:sticky;
+  z-index:402;
+  background:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 32px;
+  border-bottom:1px solid var(--border);
+}
+.sv-answers-header__title{font-size:15px;font-weight:700;color:var(--ink);}
+
+.sv-table-nav{
+  display:flex;align-items:center;gap:10px;
+}
+.sv-table-nav__btn{
+  width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+  background:#f8fafc;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:.15s;
+}
+.sv-table-nav__btn:hover:not(:disabled){border-color:var(--sf-purple);color:var(--sf-purple);}
+.sv-table-nav__btn:disabled{opacity:.35;cursor:not-allowed;}
+.sv-table-nav__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+.sv-table-nav__input{
+  width:34px;text-align:center;border:1px solid var(--border);border-radius:6px;
+  font-size:13.5px;font-weight:700;color:var(--ink);padding:4px 2px;
+  -moz-appearance:textfield;
+}
+.sv-table-nav__input::-webkit-outer-spin-button,
+.sv-table-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.sv-table-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
+.sv-table-nav__input:disabled{background:#f3f4f6;color:var(--ink-faint);cursor:not-allowed;}
+
 .sv-answers-card table.sv-table thead th{
   position:sticky;
   z-index:400;
   background:#fff;
-  top:0; /* di-override oleh JS jadi tinggi kartu info yang sebenarnya */
+  top:0; /* di-override oleh JS jadi tinggi kartu info + header nav yang sebenarnya */
 }
 </style>
 }
@@ -46,12 +79,23 @@
     </div>
 </div>
 
-<div class="sv-card sv-answers-card">
+<div class="sv-card sv-answers-card p-0">
+    <div class="sv-answers-header" id="answersHeaderBar">
+        <span class="sv-answers-header__title">Daftar Jawaban</span>
+        <div class="sv-table-nav" id="answersNav">
+            <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
+            <span class="sv-table-nav__label">
+                Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
+            </span>
+            <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
+        </div>
+    </div>
+    <div class="px-4">
     <table class="sv-table">
         <thead>
             <tr><th>Section</th><th>Pertanyaan</th><th>Jawaban</th><th></th></tr>
         </thead>
-        <tbody>
+        <tbody id="answersTbody">
             @foreach (var a in Model.SurveyAnswers.OrderBy(a => a.Question.OrderNo))
             {
                 <tr>
@@ -70,6 +114,7 @@
             }
         </tbody>
     </table>
+    </div>
 </div>
 
 <a asp-action="Responses" class="sv-btn sv-btn--ghost mt-3">Kembali ke Daftar Jawaban</a>
@@ -77,8 +122,25 @@
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    function positionStickyHeader() {
-        var infoCard = document.getElementById('svResponseInfo');
+function positionStickyHeader() {
+    var infoCard = document.getElementById('svResponseInfo');
+    var headerBar = document.getElementById('answersHeaderBar');
+    var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
+    if (!infoCard || !headerBar || !thead) return;
+
+    var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
+    var infoHeight = infoCard.offsetHeight;
+    var headerBarHeight = headerBar.offsetHeight;
+
+    // Header bar (judul + nav halaman) nempel tepat di bawah info card
+    headerBar.style.top = (topbarH + infoHeight) + 'px';
+
+    // Header kolom tabel nempel tepat di bawah header bar itu
+    var stickyTop = topbarH + infoHeight + headerBarHeight;
+    document.querySelectorAll('.sv-answers-card table.sv-table thead th').forEach(function (th) {
+        th.style.top = stickyTop + 'px';
+    });
+}        var infoCard = document.getElementById('svResponseInfo');
         var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
         if (!infoCard || !thead) return;
 
@@ -93,6 +155,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     positionStickyHeader();
     window.addEventListener('resize', positionStickyHeader);
+
+    initTablePager({ tbodySelector: '#answersTbody', navId: 'answersNav', pageSize: 10 });
 });
 </script>
 }
