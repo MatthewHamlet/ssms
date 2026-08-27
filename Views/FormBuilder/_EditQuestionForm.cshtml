@@ -1,0 +1,78 @@
+@model SurveyFormApp.Models.SurveyQuestion
+@{
+    long versionId = ViewBag.VersionId;
+    string optionsRaw = ViewBag.OptionsRaw;
+}
+
+<form asp-action="EditQuestion" asp-controller="FormBuilder" method="post" class="row g-3" id="editQuestionForm">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" name="versionId" value="@versionId" />
+
+    <div class="col-md-4">
+        <label class="form-label">Kode Pertanyaan <span class="text-danger">*harus unik</span></label>
+        <input name="questionCode" class="form-control" value="@Model.QuestionCode" required />
+    </div>
+    <div class="col-md-8">
+        <label class="form-label">Teks Pertanyaan</label>
+        <input name="questionText" class="form-control" value="@Model.QuestionText" required />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Tipe Jawaban</label>
+        <select name="questionType" class="form-select sv-question-type" data-target="opts-edit" data-scope="edit" data-current-type="@Model.QuestionType">
+            @foreach (var t in new[] { "text", "textarea", "number", "date", "dropdown", "boolean", "photo" })
+            {
+                <option value="@t" selected="@(string.Equals(Model.QuestionType?.Trim(), t, StringComparison.OrdinalIgnoreCase))">@t</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-8">
+        <label class="form-label d-block">&nbsp;</label>
+        <div class="form-check pt-2">
+            <input type="checkbox" name="isRequired" value="true" class="form-check-input" id="editReq"
+                   checked="@Model.IsRequired" />
+            <label class="form-check-label" for="editReq">Wajib diisi</label>
+        </div>
+    </div>
+
+    <div class="col-md-6" id="opts-edit" style="display:none;">
+        <label class="form-label">Opsi Dropdown</label>
+        <div class="sv-option-header">
+            <span class="sv-opt-header-spacer"></span>
+            <span class="sv-opt-header-label">Label</span>
+            <span class="sv-opt-header-value">Value</span>
+            <span class="sv-opt-header-spacer-end"></span>
+        </div>
+        <div class="sv-option-rows" id="optrows-edit" data-target="optsRaw-edit"></div>
+        <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-add-option" data-rows="optrows-edit">+ Tambah Opsi</button>
+        <input type="hidden" name="optionsRaw" id="optsRaw-edit" value="@optionsRaw" />
+        <small class="text-muted d-block mt-1">
+            <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
+        </small>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">Teks Bantuan</label>
+        <input name="helpText" class="form-control" value="@Model.HelpText" />
+    </div>
+
+    <div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="number" hidden>
+        <label class="form-label">Min Value</label>
+        <input type="number" step="any" name="minValue" class="form-control" value="@Model.MinValue" />
+    </div>
+    <div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="number" hidden>
+        <label class="form-label">Max Value</label>
+        <input type="number" step="any" name="maxValue" class="form-control" value="@Model.MaxValue" />
+    </div>
+    <div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="text,textarea" hidden>
+        <label class="form-label">Max Length</label>
+        <input type="number" name="maxLength" class="form-control" value="@Model.MaxLength" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Placeholder</label>
+        <input name="placeholder" class="form-control" value="@Model.Placeholder" />
+    </div>
+    <div class="col-md-6 sv-cond-field" data-scope="edit" data-show-for="text,textarea" hidden>
+        <label class="form-label">Validation Regex (opsional)</label>
+        <input type="text" name="validationRegex" class="form-control" value="@Model.ValidationRegex" placeholder="cth: ^[0-9]{10}$" />
+    </div>
+</form>

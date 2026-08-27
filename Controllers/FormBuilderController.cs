@@ -98,142 +98,35 @@ public class FormBuilderController : Controller
         return RedirectToAction(nameof(Manage), new { versionId = version.Id });
     }
 
-// // POST: /FormBuilder/DeleteVersion (yang bisa apus semuanya walaupun masih ada isinya)
-// [HttpPost]
-// [ValidateAntiForgeryToken]
-// public async Task<IActionResult> DeleteVersion(long versionId, long formId)
-// {
-//     var version = await _context.SurveyFormVersions
-//         .FirstOrDefaultAsync(v => v.Id == versionId);
-
-//     if (version == null) return NotFound();
-
-//     if (version.IsPublished)
-//     {
-//         TempData["Error"] = "Versi yang sedang published tidak bisa dihapus. Publish versi lain dulu, atau unpublish versi ini.";
-//         return RedirectToAction(nameof(Versions), new { formId });
-//     }
-
-//     await using var transaction = await _context.Database.BeginTransactionAsync();
-//     try
-//     {
-//         // 1. Kumpulkan semua ID section & question di versi ini
-//         var sectionIds = await _context.SurveySections
-//             .Where(s => s.FormVersionId == versionId)
-//             .Select(s => s.Id)
-//             .ToListAsync();
-
-//         var questionIds = await _context.SurveyQuestions
-//             .Where(q => sectionIds.Contains(q.SectionId))
-//             .Select(q => q.Id)
-//             .ToListAsync();
-
-//         // 2. Kumpulkan semua ID assignment & response di versi ini
-//         var assignmentIds = await _context.SurveyAssignments
-//             .Where(a => a.FormVersionId == versionId)
-//             .Select(a => a.Id)
-//             .ToListAsync();
-
-//         var responseIds = await _context.SurveyResponses
-//             .Where(r => assignmentIds.Contains(r.AssignmentId))
-//             .Select(r => r.Id)
-//             .ToListAsync();
-
-//         // 3. Hapus data turunan response (paling dalam dulu)
-//         _context.SurveyAnswers.RemoveRange(
-//             _context.SurveyAnswers.Where(a => responseIds.Contains(a.ResponseId)));
-//         _context.SurveyAnswerGroups.RemoveRange(
-//             _context.SurveyAnswerGroups.Where(a => responseIds.Contains(a.ResponseId)));
-//         _context.SurveyAttachments.RemoveRange(
-//             _context.SurveyAttachments.Where(a => responseIds.Contains(a.ResponseId)));
-//         _context.SurveyFraudFlags.RemoveRange(
-//             _context.SurveyFraudFlags.Where(f => responseIds.Contains(f.ResponseId)));
-//         _context.SurveyGeoValidations.RemoveRange(
-//             _context.SurveyGeoValidations.Where(g => responseIds.Contains(g.ResponseId)));
-//         _context.SurveyLocationLogs.RemoveRange(
-//             _context.SurveyLocationLogs.Where(l => responseIds.Contains(l.ResponseId)));
-//         _context.SurveyScores.RemoveRange(
-//             _context.SurveyScores.Where(s => responseIds.Contains(s.ResponseId)));
-//         await _context.SaveChangesAsync();
-
-//         // 4. Hapus response, lalu assignment
-//         _context.SurveyResponses.RemoveRange(
-//             _context.SurveyResponses.Where(r => responseIds.Contains(r.Id)));
-//         await _context.SaveChangesAsync();
-
-//         _context.SurveyAssignments.RemoveRange(
-//             _context.SurveyAssignments.Where(a => assignmentIds.Contains(a.Id)));
-//         await _context.SaveChangesAsync();
-
-//         // 5. Hapus data turunan question: jawaban/attachment sisa (kalau ada yang nyantol ke question tapi response-nya di luar versi ini), options, rules
-//         _context.SurveyAnswers.RemoveRange(
-//             _context.SurveyAnswers.Where(a => questionIds.Contains(a.QuestionId)));
-//         _context.SurveyAttachments.RemoveRange(
-//             _context.SurveyAttachments.Where(a => a.QuestionId != null && questionIds.Contains(a.QuestionId.Value)));
-//         _context.SurveyQuestionOptions.RemoveRange(
-//             _context.SurveyQuestionOptions.Where(o => questionIds.Contains(o.QuestionId)));
-//         _context.SurveyQuestionRules.RemoveRange(
-//             _context.SurveyQuestionRules.Where(r => questionIds.Contains(r.QuestionId) || questionIds.Contains(r.DependsOnQuestionId)));
-//         await _context.SaveChangesAsync();
-
-//         // 6. Hapus question, lalu group, lalu section
-//         _context.SurveyQuestions.RemoveRange(
-//             _context.SurveyQuestions.Where(q => questionIds.Contains(q.Id)));
-//         await _context.SaveChangesAsync();
-
-//         _context.SurveyQuestionGroups.RemoveRange(
-//             _context.SurveyQuestionGroups.Where(g => sectionIds.Contains(g.SectionId)));
-//         await _context.SaveChangesAsync();
-
-//         _context.SurveySections.RemoveRange(
-//             _context.SurveySections.Where(s => sectionIds.Contains(s.Id)));
-//         await _context.SaveChangesAsync();
-
-//         // 7. Terakhir, hapus versinya sendiri
-//         _context.SurveyFormVersions.Remove(version);
-//         await _context.SaveChangesAsync();
-
-//         await transaction.CommitAsync();
-//         TempData["Success"] = "Versi beserta seluruh data terkait berhasil dihapus.";
-//     }
-//     catch (Exception)
-//     {
-//         await transaction.RollbackAsync();
-//         TempData["Error"] = "Gagal menghapus versi. Terjadi kesalahan saat menghapus data terkait.";
-//     }
-
-//     return RedirectToAction(nameof(Versions), new { formId });
-// }
-
     // POST: /FormBuilder/DeleteVersion (yang gak bisa didelete kalau masih ada isi)
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> DeleteVersion(long versionId, long formId)
-{
-    var version = await _context.SurveyFormVersions
-        .FirstOrDefaultAsync(v => v.Id == versionId);
-
-    if (version == null) return NotFound();
-
-    if (version.IsPublished)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteVersion(long versionId, long formId)
     {
-        TempData["Error"] = "Versi yang sedang published tidak bisa dihapus. Publish versi lain dulu, atau unpublish versi ini.";
+        var version = await _context.SurveyFormVersions
+            .FirstOrDefaultAsync(v => v.Id == versionId);
+
+        if (version == null) return NotFound();
+
+        if (version.IsPublished)
+        {
+            TempData["Error"] = "Versi yang sedang published tidak bisa dihapus. Publish versi lain dulu, atau unpublish versi ini.";
+            return RedirectToAction(nameof(Versions), new { formId });
+        }
+
+        try
+        {
+            _context.SurveyFormVersions.Remove(version);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Versi berhasil dihapus.";
+        }
+        catch (DbUpdateException)
+        {
+            TempData["Error"] = "Versi ini tidak bisa dihapus karena masih punya data terkait (section/pertanyaan/jawaban survey). Hapus data terkait dulu sebelum menghapus versi.";
+        }
+
         return RedirectToAction(nameof(Versions), new { formId });
     }
-
-    try
-    {
-        _context.SurveyFormVersions.Remove(version);
-        await _context.SaveChangesAsync();
-        TempData["Success"] = "Versi berhasil dihapus.";
-    }
-    catch (DbUpdateException)
-    {
-        TempData["Error"] = "Versi ini tidak bisa dihapus karena masih punya data terkait (section/pertanyaan/jawaban survey). Hapus data terkait dulu sebelum menghapus versi.";
-    }
-
-    return RedirectToAction(nameof(Versions), new { formId });
-}
 
     // GET: /FormBuilder/Manage/5 (versionId)
     public async Task<IActionResult> Manage(long versionId)
@@ -282,45 +175,51 @@ public async Task<IActionResult> DeleteVersion(long versionId, long formId)
     }
 
     // POST: /FormBuilder/AddQuestion
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> AddQuestion(
-    long sectionId, long versionId,
-    string questionCode, string questionText, string questionType,
-    bool isRequired, int orderNo,
-    string? placeholder, string? helpText,
-    decimal? minValue, decimal? maxValue, int? maxLength,
-    string? validationRegex,
-    string? optionsRaw)
-{
-    // cek kode unik dulu sebelum insert
-    var codeExists = await _context.SurveyQuestions
-        .AnyAsync(q => q.QuestionCode == questionCode);
-
-    if (codeExists)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddQuestion(
+        long sectionId, long versionId,
+        string questionCode, string questionText, string questionType,
+        bool isRequired,
+        string? placeholder, string? helpText,
+        decimal? minValue, decimal? maxValue, int? maxLength,
+        string? validationRegex,
+        string? optionsRaw)
     {
-        TempData["Error"] = $"Kode pertanyaan '{questionCode}' sudah dipakai pertanyaan lain. Pakai kode lain yang belum ada.";
-        return RedirectToAction(nameof(Manage), new { versionId });
-    }
+        // cek kode unik dulu sebelum insert
+        var codeExists = await _context.SurveyQuestions
+            .AnyAsync(q => q.QuestionCode == questionCode);
 
-    var question = new SurveyQuestion
-    {
-        SectionId = sectionId,
-        QuestionCode = questionCode,
-        QuestionText = questionText,
-        QuestionType = questionType,
-        IsRequired = isRequired,
-        OrderNo = orderNo,
-        Placeholder = placeholder,
-        HelpText = helpText,
-        MinValue = minValue,
-        MaxValue = maxValue,
-        MaxLength = maxLength,
-        ValidationRegex = validationRegex,
-        CreatedAt = DateTime.Now
-    };
-    _context.SurveyQuestions.Add(question);
-    await _context.SaveChangesAsync();
+        if (codeExists)
+        {
+            TempData["Error"] = $"Kode pertanyaan '{questionCode}' sudah dipakai pertanyaan lain. Pakai kode lain yang belum ada.";
+            return RedirectToAction(nameof(Manage), new { versionId });
+        }
+
+        // urutan otomatis: taruh di paling akhir section ini, geser2 pakai drag & drop
+        var maxOrder = await _context.SurveyQuestions
+            .Where(q => q.SectionId == sectionId)
+            .Select(q => (int?)q.OrderNo)
+            .MaxAsync() ?? -1;
+
+        var question = new SurveyQuestion
+        {
+            SectionId = sectionId,
+            QuestionCode = questionCode,
+            QuestionText = questionText,
+            QuestionType = questionType,
+            IsRequired = isRequired,
+            OrderNo = maxOrder + 1,
+            Placeholder = placeholder,
+            HelpText = helpText,
+            MinValue = minValue,
+            MaxValue = maxValue,
+            MaxLength = maxLength,
+            ValidationRegex = validationRegex,
+            CreatedAt = DateTime.Now
+        };
+        _context.SurveyQuestions.Add(question);
+        await _context.SaveChangesAsync();
 
         if (questionType.Equals("dropdown", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(optionsRaw))
@@ -350,8 +249,23 @@ public async Task<IActionResult> AddQuestion(
         return RedirectToAction(nameof(Manage), new { versionId });
     }
 
-        // GET: /FormBuilder/EditQuestion/5
+    // GET: /FormBuilder/EditQuestion/5 -> udah gak dipakai sebagai halaman, redirect balik ke Manage
     public async Task<IActionResult> EditQuestion(long id)
+    {
+        var question = await _context.SurveyQuestions.FindAsync(id);
+        if (question == null) return NotFound();
+
+        var versionId = await _context.SurveySections
+            .Where(s => s.Id == question.SectionId)
+            .Select(s => s.FormVersionId)
+            .FirstOrDefaultAsync();
+
+        return RedirectToAction(nameof(Manage), new { versionId });
+    }
+
+    // GET: /FormBuilder/EditQuestionPartial/5 -> dipanggil via fetch buat isi modal edit
+    [HttpGet]
+    public async Task<IActionResult> EditQuestionPartial(long id)
     {
         var question = await _context.SurveyQuestions
             .Include(q => q.SurveyQuestionOptions)
@@ -359,57 +273,57 @@ public async Task<IActionResult> AddQuestion(
 
         if (question == null) return NotFound();
 
-        ViewBag.VersionId = (await _context.SurveySections
+        ViewBag.VersionId = await _context.SurveySections
             .Where(s => s.Id == question.SectionId)
             .Select(s => s.FormVersionId)
-            .FirstOrDefaultAsync());
+            .FirstOrDefaultAsync();
 
         ViewBag.OptionsRaw = string.Join(", ",
             question.SurveyQuestionOptions
                 .OrderBy(o => o.OrderNo)
                 .Select(o => $"{o.OptionLabel}:{o.OptionValue}"));
 
-        return View(question);
+        return PartialView("_EditQuestionForm", question);
     }
 
     // POST: /FormBuilder/EditQuestion
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> EditQuestion(
-    long id, long versionId,
-    string questionCode, string questionText, string questionType,
-    bool isRequired, int orderNo,
-    string? placeholder, string? helpText,
-    decimal? minValue, decimal? maxValue, int? maxLength,
-    string? validationRegex,
-    string? optionsRaw)
-{
-    var question = await _context.SurveyQuestions
-        .Include(q => q.SurveyQuestionOptions)
-        .FirstOrDefaultAsync(q => q.Id == id);
-
-    if (question == null) return NotFound();
-
-    var codeExists = await _context.SurveyQuestions
-        .AnyAsync(q => q.QuestionCode == questionCode && q.Id != id);
-
-    if (codeExists)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditQuestion(
+        long id, long versionId,
+        string questionCode, string questionText, string questionType,
+        bool isRequired,
+        string? placeholder, string? helpText,
+        decimal? minValue, decimal? maxValue, int? maxLength,
+        string? validationRegex,
+        string? optionsRaw)
     {
-        TempData["Error"] = $"Kode pertanyaan '{questionCode}' sudah dipakai pertanyaan lain.";
-        return RedirectToAction(nameof(EditQuestion), new { id });
-    }
+        var question = await _context.SurveyQuestions
+            .Include(q => q.SurveyQuestionOptions)
+            .FirstOrDefaultAsync(q => q.Id == id);
 
-    question.QuestionCode = questionCode;
-    question.QuestionText = questionText;
-    question.QuestionType = questionType;
-    question.IsRequired = isRequired;
-    question.OrderNo = orderNo;
-    question.Placeholder = placeholder;
-    question.HelpText = helpText;
-    question.MinValue = minValue;
-    question.MaxValue = maxValue;
-    question.MaxLength = maxLength;
-    question.ValidationRegex = validationRegex;
+        if (question == null) return NotFound();
+
+        var codeExists = await _context.SurveyQuestions
+            .AnyAsync(q => q.QuestionCode == questionCode && q.Id != id);
+
+        if (codeExists)
+        {
+            TempData["Error"] = $"Kode pertanyaan '{questionCode}' sudah dipakai pertanyaan lain.";
+            return RedirectToAction(nameof(Manage), new { versionId });
+        }
+
+        question.QuestionCode = questionCode;
+        question.QuestionText = questionText;
+        question.QuestionType = questionType;
+        question.IsRequired = isRequired;
+        question.Placeholder = placeholder;
+        question.HelpText = helpText;
+        question.MinValue = minValue;
+        question.MaxValue = maxValue;
+        question.MaxLength = maxLength;
+        question.ValidationRegex = validationRegex;
+        // OrderNo sengaja gak diubah di sini, biar gak nabrak sama hasil drag & drop
 
         _context.SurveyQuestionOptions.RemoveRange(question.SurveyQuestionOptions);
 
@@ -456,6 +370,33 @@ public async Task<IActionResult> EditQuestion(
         return RedirectToAction(nameof(Manage), new { versionId });
     }
 
+    // POST: /FormBuilder/ReorderQuestions -> dipanggil via fetch pas drag & drop selesai
+    [HttpPost]
+    public async Task<IActionResult> ReorderQuestions([FromBody] ReorderQuestionsRequest request)
+    {
+        if (request == null || request.QuestionIds == null || request.QuestionIds.Count == 0)
+        {
+            return BadRequest();
+        }
+
+        var questions = await _context.SurveyQuestions
+            .Where(q => q.SectionId == request.SectionId && request.QuestionIds.Contains(q.Id))
+            .ToListAsync();
+
+        for (int i = 0; i < request.QuestionIds.Count; i++)
+        {
+            var question = questions.FirstOrDefault(q => q.Id == request.QuestionIds[i]);
+            if (question != null)
+            {
+                question.OrderNo = i;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok();
+    }
+
     // POST: /FormBuilder/Publish
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -476,4 +417,10 @@ public async Task<IActionResult> EditQuestion(
 
         return RedirectToAction(nameof(Versions), new { formId = version.FormId });
     }
+}
+
+public class ReorderQuestionsRequest
+{
+    public long SectionId { get; set; }
+    public List<long> QuestionIds { get; set; } = new List<long>();
 }

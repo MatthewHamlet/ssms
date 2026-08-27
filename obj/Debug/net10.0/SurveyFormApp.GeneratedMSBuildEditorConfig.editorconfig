@@ -35,10 +35,6 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcQ3JlYXRlRm9ybS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/MyBook SAGA/Downloads/acp-code/pkl (webdev)/ssms/SurveyFormApp/Views/FormBuilder/EditQuestion.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcRWRpdFF1ZXN0aW9uLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/MyBook SAGA/Downloads/acp-code/pkl (webdev)/ssms/SurveyFormApp/Views/FormBuilder/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -49,6 +45,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/MyBook SAGA/Downloads/acp-code/pkl (webdev)/ssms/SurveyFormApp/Views/FormBuilder/Versions.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcVmVyc2lvbnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/MyBook SAGA/Downloads/acp-code/pkl (webdev)/ssms/SurveyFormApp/Views/FormBuilder/_EditQuestionForm.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcX0VkaXRRdWVzdGlvbkZvcm0uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/MyBook SAGA/Downloads/acp-code/pkl (webdev)/ssms/SurveyFormApp/Views/Home/Index.cshtml]
