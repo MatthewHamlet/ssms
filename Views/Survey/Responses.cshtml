@@ -1,4 +1,4 @@
-@model List<SurveyFormApp.Models.SurveyResponse>
+@model SurveyFormApp.Models.SurveyResponseListViewModel
 @{
     ViewData["Title"] = "Daftar Jawaban";
     ViewData["ActiveMenu"] = "responses";
@@ -7,9 +7,6 @@
 
 @section Styles {
 <style>
-    .sv-table-nav__input:disabled{
-  background:#f3f4f6;color:var(--ink-faint);cursor:not-allowed;
-}
 .sf-table-wrap{overflow-x:auto;}
 .sf-table{width:100%;border-collapse:collapse;}
 .sf-table thead th{
@@ -17,26 +14,6 @@
   letter-spacing:.04em;color:var(--ink-faint);
   padding:0 16px 12px;border-bottom:2px solid var(--border);
 }
-.sv-table-nav{
-  display:flex;align-items:center;justify-content:flex-end;gap:10px;
-  margin:14px 0 4px;
-}
-.sv-table-nav__btn{
-  width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
-  background:#f8fafc;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:.15s;
-}
-.sv-table-nav__btn:hover:not(:disabled){border-color:var(--sf-purple);color:var(--sf-purple);}
-.sv-table-nav__btn:disabled{opacity:.35;cursor:not-allowed;}
-.sv-table-nav__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
-.sv-table-nav__input{
-  width:34px;text-align:center;border:1px solid var(--border);border-radius:6px;
-  font-size:13.5px;font-weight:700;color:var(--ink);padding:4px 2px;
-  -moz-appearance:textfield;
-}
-.sv-table-nav__input::-webkit-outer-spin-button,
-.sv-table-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
-.sv-table-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
 .sf-table tbody td{
   padding:16px;border-bottom:1px solid var(--border);
   font-size:14.5px;color:var(--ink);vertical-align:middle;
@@ -67,6 +44,11 @@
 .sf-empty{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 .sf-empty i{font-size:38px;display:block;margin-bottom:12px;color:var(--ink-faint);}
 
+.sv-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end;}
+.sv-filter-bar .sv-filter-field{min-width:160px;}
+.sv-simple-pager{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px;}
+.sv-simple-pager__label{font-size:13.5px;font-weight:700;color:var(--ink);}
+
 @@media(max-width:768px){
   .sf-table thead{display:none;}
   .sf-table, .sf-table tbody, .sf-table tr, .sf-table td{display:block;width:100%;}
@@ -80,23 +62,58 @@
 <p class="sv-eyebrow">Survei Digital</p>
 <h1 class="sv-title">Daftar Jawaban Survey</h1>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
 <div class="sv-card">
-    @if (Model != null && Model.Count > 0)
+    <form method="get" asp-action="Responses" class="sv-filter-bar">
+        <div class="sv-filter-field">
+            <label class="form-label">Form</label>
+            <select name="formId" class="form-select">
+                <option value="">Semua Form</option>
+                @foreach (var f in Model.AvailableForms)
+                {
+                    <option value="@f.Id" selected="@(Model.FilterFormId == f.Id)">@f.FormName</option>
+                }
+            </select>
+        </div>
+        <div class="sv-filter-field">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="">Semua Status</option>
+                <option value="SUBMITTED" selected="@(Model.FilterStatus == "SUBMITTED")">Submitted</option>
+                <option value="PENDING" selected="@(Model.FilterStatus == "PENDING")">Pending</option>
+            </select>
+        </div>
+        <div class="sv-filter-field">
+            <label class="form-label">Surveyor</label>
+            <input type="text" name="surveyorName" class="form-control" value="@Model.FilterSurveyorName" placeholder="Cari nama surveyor" />
+        </div>
+        <div class="sv-filter-field">
+            <label class="form-label">Dari Tanggal</label>
+            <input type="date" name="dateFrom" class="form-control" value="@(Model.FilterDateFrom?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="sv-filter-field">
+            <label class="form-label">Sampai Tanggal</label>
+            <input type="date" name="dateTo" class="form-control" value="@(Model.FilterDateTo?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="sv-filter-field">
+            <button type="submit" class="sv-btn sv-btn--primary">Filter</button>
+            <a asp-action="Responses" class="sv-btn sv-btn--ghost">Reset</a>
+        </div>
+    </form>
+
+    @if (Model.Items.Count > 0)
     {
-        <div class="sv-table-nav" id="responsesNav">
-    <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
-    <span class="sv-table-nav__label">
-        Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
-    </span>
-    <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
-</div>
         <div class="sf-table-wrap">
             <table class="sf-table">
                 <thead>
                     <tr><th>Form</th><th>Surveyor</th><th>Status</th><th>Waktu Submit</th><th></th></tr>
                 </thead>
-                <tbody id="responsesTbody">
-                    @foreach (var r in Model)
+                <tbody>
+                    @foreach (var r in Model.Items)
                     {
                         var statusClass = (r.Status?.ToUpper()) switch
                         {
@@ -110,30 +127,52 @@
                             <td class="sf-surveyor">@r.SurveyorId</td>
                             <td><span class="sf-status @statusClass"><i class="bi bi-circle-fill"></i>@r.Status</span></td>
                             <td class="sf-submitted">@(r.SubmittedAt?.ToString("dd MMM yyyy, HH:mm") ?? "-")</td>
-                            <td>
+                            <td class="text-nowrap">
                                 <a asp-action="ResponseDetail" asp-route-id="@r.Id" class="sf-detail-btn">
                                     <i class="bi bi-eye-fill"></i> Lihat Detail
                                 </a>
+                                <form asp-action="DeleteResponse" method="post" style="display:inline" onsubmit="return confirm('Hapus jawaban survey ini beserta seluruh datanya? Tindakan ini tidak bisa dibatalkan.');">
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">Hapus</button>
+                                </form>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        <div class="sv-simple-pager">
+            @{
+                var prevDisabled = Model.CurrentPage <= 1;
+                var nextDisabled = Model.CurrentPage >= Model.TotalPages;
+                var routeValues = new Dictionary<string, string?>
+                {
+                    ["formId"] = Model.FilterFormId?.ToString(),
+                    ["status"] = Model.FilterStatus,
+                    ["surveyorName"] = Model.FilterSurveyorName,
+                    ["dateFrom"] = Model.FilterDateFrom?.ToString("yyyy-MM-dd"),
+                    ["dateTo"] = Model.FilterDateTo?.ToString("yyyy-MM-dd")
+                };
+            }
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage - 1)"
+               style="@(prevDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                <i class="bi bi-chevron-left"></i> Sebelumnya
+            </a>
+            <span class="sv-simple-pager__label">Halaman @Model.CurrentPage dari @(Math.Max(Model.TotalPages, 1))</span>
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage + 1)"
+               style="@(nextDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                Selanjutnya <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
     }
     else
     {
         <div class="sf-empty">
             <i class="bi bi-inbox"></i>
-            Belum ada jawaban survey yang masuk.
+            Belum ada jawaban survey yang cocok dengan filter ini.
         </div>
     }
-
-@section Scripts {
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    initTablePager({ tbodySelector: '#responsesTbody', navId: 'responsesNav', pageSize: 10 });
-});
-</script>
-}
 </div>

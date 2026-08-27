@@ -79,19 +79,49 @@
     </div>
 </div>
 
+@if (Model.SurveyScore != null || Model.SurveyGeoValidation != null || (Model.SurveyFraudFlags != null && Model.SurveyFraudFlags.Any()))
+{
+    <div class="sv-card">
+        <strong class="d-block mb-2">Info Tambahan</strong>
+        @if (Model.SurveyScore != null)
+        {
+            <p class="mb-1"><strong>Skor Total:</strong> @Model.SurveyScore.ScoreTotal</p>
+        }
+        @if (Model.SurveyGeoValidation != null)
+        {
+            <p class="mb-1">
+                <strong>Validasi Lokasi:</strong>
+                @(Model.SurveyGeoValidation.IsValid ? "Valid" : "Tidak Valid")
+                (jarak @Model.SurveyGeoValidation.DistanceMeters.ToString("N0") m)
+            </p>
+        }
+        @if (Model.SurveyFraudFlags != null && Model.SurveyFraudFlags.Any())
+        {
+            <p class="mb-1"><strong>Flag Kecurangan:</strong></p>
+            <ul class="mb-0">
+                @foreach (var flag in Model.SurveyFraudFlags)
+                {
+                    <li>@flag.FlagCode — @flag.Description</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
 <div class="sv-card sv-answers-card p-0">
 <div class="sv-answers-header" id="answersHeaderBar">
-    <a asp-action="Responses" class="sv-btn sv-btn--ghost sv-btn--sm">
-        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Jawaban
-    </a>
-    <div class="sv-table-nav" id="answersNav">
-        <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
-        <span class="sv-table-nav__label">
-            Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
-        </span>
-        <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
+    <div class="d-flex gap-2 align-items-center">
+        <a asp-action="Responses" class="sv-btn sv-btn--ghost sv-btn--sm">
+            <i class="bi bi-arrow-left"></i> Kembali ke Daftar Jawaban
+        </a>
+        <form asp-action="DeleteResponse" method="post" onsubmit="return confirm('Hapus jawaban survey ini beserta seluruh datanya? Tindakan ini tidak bisa dibatalkan.');">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">
+                <i class="bi bi-trash"></i> Hapus Response
+            </button>
+        </form>
     </div>
-</div>
+    ...
     <div class="px-4">
     <table class="sv-table">
         <thead>

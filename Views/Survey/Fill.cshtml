@@ -1,6 +1,7 @@
 @model SurveyFormApp.Models.SurveyFormVersion
 @{
     ViewData["Title"] = "Isi Survey";
+    ViewData["ActiveMenu"] = "surveyindex";   // <-- tambahan (konsistensi #12)
     Layout = "_SidebarLayout";
 
     var sectionsOrdered = Model.SurveySections.OrderBy(s => s.OrderNo).ToList();
@@ -147,10 +148,24 @@
 <p class="sv-eyebrow">Survei Digital</p>
 <h1 class="sv-title">Isi Survey</h1>
 
+@if (ViewData["Errors"] is List<string> errors && errors.Count > 0)
+{
+    <div class="alert alert-danger">
+        <strong>Mohon periksa kembali isian berikut:</strong>
+        <ul class="mb-0">
+            @foreach (var err in errors)
+            {
+                <li>@err</li>
+            }
+        </ul>
+    </div>
+}
+
 <div class="sv-card">
     <div class="sv-stepper" id="stepper"></div>
 
     <form asp-action="Fill" method="post" enctype="multipart/form-data" id="surveyForm" novalidate>
+        @Html.AntiForgeryToken()
         <input type="hidden" name="formVersionId" value="@Model.Id" />
 
         <div class="sv-field sv-full" style="margin-bottom:18px;">
