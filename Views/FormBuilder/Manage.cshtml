@@ -7,6 +7,9 @@
 
 @section Styles {
 <style>
+.sv-cond-field{transition:none;}
+.sv-cond-field[hidden]{display:none !important;}
+
 .sv-section-card{position:relative;}
 .sv-section-header{
   position:sticky;
@@ -132,7 +135,7 @@
         </div>
         <div class="col-md-2">
             <label class="form-label">Tipe Jawaban</label>
-            <select name="questionType" class="form-select sv-question-type" data-target="opts-@sec.Id">
+            <select name="questionType" class="form-select sv-question-type" data-target="opts-@sec.Id" data-scope="@sec.Id">
                 <option value="text">Text</option>
                 <option value="textarea">Textarea</option>
                 <option value="number">Number</option>
@@ -153,21 +156,22 @@
                 <label class="form-check-label" for="req-@sec.Id">Wajib diisi</label>
             </div>
         </div>
-<div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
-    <label class="form-label">Opsi Dropdown</label>
-    <div class="sv-option-header">
-        <span class="sv-opt-header-spacer"></span>
-        <span class="sv-opt-header-label">Label</span>
-        <span class="sv-opt-header-value">Value</span>
-        <span class="sv-opt-header-spacer-end"></span>
-    </div>
-    <div class="sv-option-rows" id="optrows-@sec.Id" data-target="optsRaw-@sec.Id"></div>
-    <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-add-option" data-rows="optrows-@sec.Id">+ Tambah Opsi</button>
-    <input type="hidden" name="optionsRaw" id="optsRaw-@sec.Id" />
-    <small class="text-muted d-block mt-1">
-        <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
-    </small>
-</div>
+
+        <div class="col-md-6 sv-opts-field" id="opts-@sec.Id" style="display:none;">
+            <label class="form-label">Opsi Dropdown</label>
+            <div class="sv-option-header">
+                <span class="sv-opt-header-spacer"></span>
+                <span class="sv-opt-header-label">Label</span>
+                <span class="sv-opt-header-value">Value</span>
+                <span class="sv-opt-header-spacer-end"></span>
+            </div>
+            <div class="sv-option-rows" id="optrows-@sec.Id" data-target="optsRaw-@sec.Id"></div>
+            <button type="button" class="sv-btn sv-btn--ghost sv-btn--sm sv-add-option" data-rows="optrows-@sec.Id">+ Tambah Opsi</button>
+            <input type="hidden" name="optionsRaw" id="optsRaw-@sec.Id" />
+            <small class="text-muted d-block mt-1">
+                <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
+            </small>
+        </div>
 
         <div class="col-md-6">
             <label class="form-label">Teks Bantuan (opsional)</label>
@@ -176,21 +180,21 @@
 
         <div class="col-12">
             <div class="sv-optional-box">
-                <small class="text-muted d-block mb-2">Opsional — batasan &amp; validasi jawaban:</small>
+                <small class="text-muted d-block mb-2">Opsional — batasan &amp; validasi jawaban (menyesuaikan tipe jawaban):</small>
                 <div class="row g-2">
-                    <div class="col-md-3">
+                    <div class="col-md-3 sv-cond-field" data-scope="@sec.Id" data-show-for="number" hidden>
                         <label class="form-label">Min Value</label>
                         <input type="number" step="any" name="minValue" class="form-control" placeholder="cth: 0" />
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 sv-cond-field" data-scope="@sec.Id" data-show-for="number" hidden>
                         <label class="form-label">Max Value</label>
                         <input type="number" step="any" name="maxValue" class="form-control" placeholder="cth: 100" />
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 sv-cond-field" data-scope="@sec.Id" data-show-for="text,textarea" hidden>
                         <label class="form-label">Max Length</label>
                         <input type="number" name="maxLength" class="form-control" placeholder="cth: 200" />
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 sv-cond-field" data-scope="@sec.Id" data-show-for="text,textarea" hidden>
                         <label class="form-label">Validation Regex</label>
                         <input type="text" name="validationRegex" class="form-control" placeholder="cth: ^[0-9]+$" />
                     </div>
@@ -231,17 +235,34 @@
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    function toggleOptsField(select) {
-        var targetId = select.dataset.target;
-        var target = document.getElementById(targetId);
-        if (!target) return;
-        target.style.display = select.value === 'dropdown' ? '' : 'none';
+    var TYPE_FIELD_MAP_CACHE = {};
+
+    function updateConditionalFields(select) {
+        var scope = select.dataset.scope;
+        var type = select.value;
+
+        // toggle panel opsi dropdown
+        var optsTarget = document.getElementById(select.dataset.target);
+        if (optsTarget) {
+            optsTarget.style.display = type === 'dropdown' ? '' : 'none';
+        }
+
+        // toggle field opsional (min/max/maxlength/regex) sesuai tipe
+        document.querySelectorAll('.sv-cond-field[data-scope="' + scope + '"]').forEach(function (field) {
+            var allowedTypes = (field.dataset.showFor || '').split(',').map(function (s) { return s.trim(); });
+            var shouldShow = allowedTypes.indexOf(type) !== -1;
+            field.hidden = !shouldShow;
+
+            if (!shouldShow) {
+                field.querySelectorAll('input').forEach(function (inp) { inp.value = ''; });
+            }
+        });
     }
 
     document.querySelectorAll('.sv-question-type').forEach(function (select) {
-        toggleOptsField(select);
+        updateConditionalFields(select);
         select.addEventListener('change', function () {
-            toggleOptsField(select);
+            updateConditionalFields(select);
         });
     });
 
@@ -258,14 +279,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initAllOptionRows();
 });
-
-function initAllOptionRows() {
-    document.querySelectorAll('.sv-option-rows').forEach(function (container) {
-        if (container.dataset.init) return;
-        container.dataset.init = "1";
-        initOptionRows(container);
-    });
-}
 
 function initAllOptionRows() {
     document.querySelectorAll('.sv-option-rows').forEach(function (container) {
@@ -307,7 +320,6 @@ function initOptionRows(container) {
         var handle = row.querySelector('.sv-opt-handle');
         row.draggable = false;
 
-        // hanya bisa mulai drag dari ikon handle, biar teks di input tetap bisa diseleksi normal
         handle.addEventListener('mousedown', function () {
             row.draggable = true;
         });
@@ -363,6 +375,11 @@ function initOptionRows(container) {
         removeBtn.innerHTML = '&times;';
         removeBtn.title = 'Hapus opsi';
         removeBtn.addEventListener('click', function () {
+            var l = labelInput.value.trim();
+            var v = valueInput.value.trim();
+            if (l || v) {
+                if (!confirm('Hapus opsi "' + (l || v) + '"?')) return;
+            }
             row.remove();
             sync();
         });
@@ -379,72 +396,6 @@ function initOptionRows(container) {
         container.appendChild(row);
     }
 
-    // prepopulate kalau hidden field sudah ada isi (mode edit)
-    if (hidden.value) {
-        hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
-            var parts = pair.split(':');
-            addRow(parts[0], parts.length > 1 ? parts[1] : parts[0]);
-        });
-        sync();
-    }
-
-    if (addBtn) {
-        addBtn.addEventListener('click', function () {
-            addRow('', '');
-            sync();
-        });
-    }
-}   
-    var hidden = document.getElementById(container.dataset.target);
-    var addBtn = document.querySelector('.sv-add-option[data-rows="' + container.id + '"]');
-
-    function sync() {
-        var pairs = [];
-        container.querySelectorAll('.sv-option-row').forEach(function (row) {
-            var label = row.querySelector('.sv-opt-label').value.trim();
-            var value = row.querySelector('.sv-opt-value').value.trim();
-            if (!label && !value) return;
-            pairs.push(label + ':' + (value || label));
-        });
-        hidden.value = pairs.join(', ');
-    }
-
-    function addRow(label, value) {
-        var row = document.createElement('div');
-        row.className = 'sv-option-row';
-
-        var labelInput = document.createElement('input');
-        labelInput.type = 'text';
-        labelInput.className = 'form-control sv-opt-label';
-        labelInput.placeholder = 'Label (tampil di form)';
-        labelInput.value = label || '';
-
-        var valueInput = document.createElement('input');
-        valueInput.type = 'text';
-        valueInput.className = 'form-control sv-opt-value';
-        valueInput.placeholder = 'Value (disimpan ke DB)';
-        valueInput.value = value || '';
-
-        var removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'sv-opt-remove';
-        removeBtn.innerHTML = '&times;';
-        removeBtn.title = 'Hapus opsi';
-        removeBtn.addEventListener('click', function () {
-            row.remove();
-            sync();
-        });
-
-        labelInput.addEventListener('input', sync);
-        valueInput.addEventListener('input', sync);
-
-        row.appendChild(labelInput);
-        row.appendChild(valueInput);
-        row.appendChild(removeBtn);
-        container.appendChild(row);
-    }
-
-    // prepopulate kalau hidden field sudah ada isi (mode edit)
     if (hidden.value) {
         hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
             var parts = pair.split(':');

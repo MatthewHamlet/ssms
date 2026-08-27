@@ -55,7 +55,7 @@
 
 <div class="col-md-3">
     <label class="form-label">Tipe Jawaban</label>
-    <select name="questionType" class="form-select sv-question-type" data-target="opts-edit" data-current-type="@Model.QuestionType">
+    <select name="questionType" class="form-select sv-question-type" data-target="opts-edit" data-scope="edit" data-current-type="@Model.QuestionType">
         @foreach (var t in new[] { "text", "textarea", "number", "date", "dropdown", "boolean", "photo" })
         {
             <option value="@t" selected="@(string.Equals(Model.QuestionType?.Trim(), t, StringComparison.OrdinalIgnoreCase))">@t</option>
@@ -90,24 +90,28 @@
         <strong>Label</strong> = teks yang tampil ke surveyor. <strong>Value</strong> = data yang dikirim &amp; disimpan ke database.
     </small>
 </div>
-        <div class="col-md-6">
-            <label class="form-label">Teks Bantuan</label>
-            <input name="helpText" class="form-control" value="@Model.HelpText" />
-        </div>
+<div class="col-md-6">
+    <label class="form-label">Teks Bantuan</label>
+    <input name="helpText" class="form-control" value="@Model.HelpText" />
+</div>
 
-        <div class="col-md-3">
-            <label class="form-label">Min Value</label>
-            <input type="number" step="any" name="minValue" class="form-control" value="@Model.MinValue" />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Max Value</label>
-            <input type="number" step="any" name="maxValue" class="form-control" value="@Model.MaxValue" />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Max Length</label>
-            <input type="number" name="maxLength" class="form-control" value="@Model.MaxLength" />
-        </div>
-        <div class="col-md-6">
+<div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="number" hidden>
+    <label class="form-label">Min Value</label>
+    <input type="number" step="any" name="minValue" class="form-control" value="@Model.MinValue" />
+</div>
+<div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="number" hidden>
+    <label class="form-label">Max Value</label>
+    <input type="number" step="any" name="maxValue" class="form-control" value="@Model.MaxValue" />
+</div>
+<div class="col-md-3 sv-cond-field" data-scope="edit" data-show-for="text,textarea" hidden>
+    <label class="form-label">Max Length</label>
+    <input type="number" name="maxLength" class="form-control" value="@Model.MaxLength" />
+</div>
+<div class="col-md-3">
+    <label class="form-label">Placeholder</label>
+    <input name="placeholder" class="form-control" value="@Model.Placeholder" />
+</div>
+<div class="col-md-6 sv-cond-field" data-scope="edit" data-show-for="text,textarea" hidden>
     <label class="form-label">Validation Regex (opsional)</label>
     <input type="text" name="validationRegex" class="form-control" value="@Model.ValidationRegex" placeholder="cth: ^[0-9]{10}$" />
 </div>
@@ -125,6 +129,173 @@
 
 @section Scripts {
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    var select = document.querySelector('.sv-question-type');
+
+    function updateConditionalFields() {
+        var scope = select.dataset.scope;
+        var type = select.value;
+
+        var optsTarget = document.getElementById(select.dataset.target);
+        if (optsTarget) {
+            optsTarget.style.display = type === 'dropdown' ? '' : 'none';
+        }
+
+        document.querySelectorAll('.sv-cond-field[data-scope="' + scope + '"]').forEach(function (field) {
+            var allowedTypes = (field.dataset.showFor || '').split(',').map(function (s) { return s.trim(); });
+            var shouldShow = allowedTypes.indexOf(type) !== -1;
+            field.hidden = !shouldShow;
+        });
+    }
+
+    // fallback: paksa value select sesuai tipe pertanyaan saat ini (case-insensitive)
+    var currentType = (select.dataset.currentType || '').trim().toLowerCase();
+    var hasMatch = Array.from(select.options).some(function (opt) {
+        return opt.value.toLowerCase() === currentType;
+    });
+    if (hasMatch) {
+        select.value = currentType;
+    }
+
+    updateConditionalFields();
+    select.addEventListener('change', updateConditionalFields);
+
+    initAllOptionRows();
+});
+
+function initAllOptionRows() {
+    document.querySelectorAll('.sv-option-rows').forEach(function (container) {
+        if (container.dataset.init) return;
+        container.dataset.init = "1";
+        initOptionRows(container);
+    });
+}
+
+function initOptionRows(container) {
+    var hidden = document.getElementById(container.dataset.target);
+    var addBtn = document.querySelector('.sv-add-option[data-rows="' + container.id + '"]');
+    var draggedRow = null;
+
+    function sync() {
+        var pairs = [];
+        container.querySelectorAll('.sv-option-row').forEach(function (row) {
+            var label = row.querySelector('.sv-opt-label').value.trim();
+            var value = row.querySelector('.sv-opt-value').value.trim();
+            if (!label && !value) return;
+            pairs.push(label + ':' + (value || label));
+        });
+        hidden.value = pairs.join(', ');
+    }
+
+    function getDragAfterElement(y) {
+        var rows = Array.from(container.querySelectorAll('.sv-option-row:not(.dragging)'));
+        return rows.reduce(function (closest, child) {
+            var box = child.getBoundingClientRect();
+            var offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            }
+            return closest;
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function attachDrag(row) {
+        var handle = row.querySelector('.sv-opt-handle');
+        row.draggable = false;
+
+        handle.addEventListener('mousedown', function () {
+            row.draggable = true;
+        });
+
+        row.addEventListener('dragstart', function (e) {
+            draggedRow = row;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        row.addEventListener('dragend', function () {
+            row.classList.remove('dragging');
+            row.draggable = false;
+            draggedRow = null;
+            sync();
+        });
+    }
+
+    container.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!draggedRow) return;
+        var afterElement = getDragAfterElement(e.clientY);
+        if (afterElement == null) {
+            container.appendChild(draggedRow);
+        } else {
+            container.insertBefore(draggedRow, afterElement);
+        }
+    });
+
+    function addRow(label, value) {
+        var row = document.createElement('div');
+        row.className = 'sv-option-row';
+
+        var handle = document.createElement('span');
+        handle.className = 'sv-opt-handle';
+        handle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+
+        var labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'form-control sv-opt-label';
+        labelInput.placeholder = 'Label (tampil di form)';
+        labelInput.value = label || '';
+
+        var valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'form-control sv-opt-value';
+        valueInput.placeholder = 'Value (disimpan ke DB)';
+        valueInput.value = value || '';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'sv-opt-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Hapus opsi';
+        removeBtn.addEventListener('click', function () {
+            var l = labelInput.value.trim();
+            var v = valueInput.value.trim();
+            if (l || v) {
+                if (!confirm('Hapus opsi "' + (l || v) + '"?')) return;
+            }
+            row.remove();
+            sync();
+        });
+
+        labelInput.addEventListener('input', sync);
+        valueInput.addEventListener('input', sync);
+
+        row.appendChild(handle);
+        row.appendChild(labelInput);
+        row.appendChild(valueInput);
+        row.appendChild(removeBtn);
+
+        attachDrag(row);
+        container.appendChild(row);
+    }
+
+    if (hidden.value) {
+        hidden.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (pair) {
+            var parts = pair.split(':');
+            addRow(parts[0], parts.length > 1 ? parts[1] : parts[0]);
+        });
+        sync();
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            addRow('', '');
+            sync();
+        });
+    }
+}
+</script>
+}<script>
 document.addEventListener('DOMContentLoaded', function () {
     var select = document.querySelector('.sv-question-type');
     var target = document.getElementById('opts-edit');
@@ -226,4 +397,3 @@ removeBtn.addEventListener('click', function () {
     }
 }
 </script>
-}
