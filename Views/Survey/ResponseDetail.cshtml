@@ -80,16 +80,18 @@
 </div>
 
 <div class="sv-card sv-answers-card p-0">
-    <div class="sv-answers-header" id="answersHeaderBar">
-        <span class="sv-answers-header__title">Daftar Jawaban</span>
-        <div class="sv-table-nav" id="answersNav">
-            <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
-            <span class="sv-table-nav__label">
-                Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
-            </span>
-            <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
-        </div>
+<div class="sv-answers-header" id="answersHeaderBar">
+    <a asp-action="Responses" class="sv-btn sv-btn--ghost sv-btn--sm">
+        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Jawaban
+    </a>
+    <div class="sv-table-nav" id="answersNav">
+        <button type="button" class="sv-table-nav__btn sv-table-nav__prev" title="Sebelumnya"><i class="bi bi-chevron-left"></i></button>
+        <span class="sv-table-nav__label">
+            Halaman <input type="number" class="sv-table-nav__input" min="1" value="1" /> dari <span class="sv-table-nav__total">1</span>
+        </span>
+        <button type="button" class="sv-table-nav__btn sv-table-nav__next" title="Selanjutnya"><i class="bi bi-chevron-right"></i></button>
     </div>
+</div>
     <div class="px-4">
     <table class="sv-table">
         <thead>
@@ -117,37 +119,25 @@
     </div>
 </div>
 
-<a asp-action="Responses" class="sv-btn sv-btn--ghost mt-3">Kembali ke Daftar Jawaban</a>
 
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-function positionStickyHeader() {
-    var infoCard = document.getElementById('svResponseInfo');
-    var headerBar = document.getElementById('answersHeaderBar');
-    var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
-    if (!infoCard || !headerBar || !thead) return;
-
-    var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
-    var infoHeight = infoCard.offsetHeight;
-    var headerBarHeight = headerBar.offsetHeight;
-
-    // Header bar (judul + nav halaman) nempel tepat di bawah info card
-    headerBar.style.top = (topbarH + infoHeight) + 'px';
-
-    // Header kolom tabel nempel tepat di bawah header bar itu
-    var stickyTop = topbarH + infoHeight + headerBarHeight;
-    document.querySelectorAll('.sv-answers-card table.sv-table thead th').forEach(function (th) {
-        th.style.top = stickyTop + 'px';
-    });
-}        var infoCard = document.getElementById('svResponseInfo');
+    function positionStickyHeader() {
+        var infoCard = document.getElementById('svResponseInfo');
+        var headerBar = document.getElementById('answersHeaderBar');
         var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
-        if (!infoCard || !thead) return;
+        if (!infoCard || !headerBar || !thead) return;
 
         var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
         var infoHeight = infoCard.offsetHeight;
-        var stickyTop = topbarH + infoHeight;
+        var headerBarHeight = headerBar.offsetHeight;
 
+        // Header bar (judul + nav halaman) nempel tepat di bawah info card
+        headerBar.style.top = (topbarH + infoHeight) + 'px';
+
+        // Header kolom tabel nempel tepat di bawah header bar itu
+        var stickyTop = topbarH + infoHeight + headerBarHeight;
         document.querySelectorAll('.sv-answers-card table.sv-table thead th').forEach(function (th) {
             th.style.top = stickyTop + 'px';
         });
