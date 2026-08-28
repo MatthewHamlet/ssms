@@ -46,8 +46,14 @@
 
 .sv-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end;}
 .sv-filter-bar .sv-filter-field{min-width:160px;}
-.sv-simple-pager{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px;}
-.sv-simple-pager__label{font-size:13.5px;font-weight:700;color:var(--ink);}
+
+.sv-page-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  margin-bottom:22px;
+}
+.sv-page-header .sv-title{margin:0;}
+.sv-simple-pager{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+.sv-simple-pager__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
 
 @@media(max-width:768px){
   .sf-table thead{display:none;}
@@ -55,12 +61,44 @@
   .sf-table tbody tr{border:1px solid var(--border);border-radius:12px;margin-bottom:12px;padding:14px;}
   .sf-table tbody td{border-bottom:none;padding:6px 0;}
   .sf-detail-btn{width:100%;justify-content:center;margin-top:8px;}
+  .sv-page-header{flex-direction:column;align-items:flex-start;}
 }
 </style>
 }
 
 <p class="sv-eyebrow">Survei Digital</p>
-<h1 class="sv-title">Daftar Jawaban Survey</h1>
+<div class="sv-page-header">
+    <h1 class="sv-title">Daftar Jawaban Survey</h1>
+
+    @if (Model.Items.Count > 0)
+    {
+        <div class="sv-simple-pager">
+            @{
+                var prevDisabled = Model.CurrentPage <= 1;
+                var nextDisabled = Model.CurrentPage >= Model.TotalPages;
+                var routeValues = new Dictionary<string, string?>
+                {
+                    ["formId"] = Model.FilterFormId?.ToString(),
+                    ["status"] = Model.FilterStatus,
+                    ["surveyorName"] = Model.FilterSurveyorName,
+                    ["dateFrom"] = Model.FilterDateFrom?.ToString("yyyy-MM-dd"),
+                    ["dateTo"] = Model.FilterDateTo?.ToString("yyyy-MM-dd")
+                };
+            }
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage - 1)"
+               style="@(prevDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                <i class="bi bi-chevron-left"></i> Sebelumnya
+            </a>
+            <span class="sv-simple-pager__label">Halaman @Model.CurrentPage dari @(Math.Max(Model.TotalPages, 1))</span>
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage + 1)"
+               style="@(nextDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                Selanjutnya <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    }
+</div>
 
 @if (TempData["Success"] != null)
 {
@@ -140,32 +178,6 @@
                     }
                 </tbody>
             </table>
-        </div>
-
-        <div class="sv-simple-pager">
-            @{
-                var prevDisabled = Model.CurrentPage <= 1;
-                var nextDisabled = Model.CurrentPage >= Model.TotalPages;
-                var routeValues = new Dictionary<string, string?>
-                {
-                    ["formId"] = Model.FilterFormId?.ToString(),
-                    ["status"] = Model.FilterStatus,
-                    ["surveyorName"] = Model.FilterSurveyorName,
-                    ["dateFrom"] = Model.FilterDateFrom?.ToString("yyyy-MM-dd"),
-                    ["dateTo"] = Model.FilterDateTo?.ToString("yyyy-MM-dd")
-                };
-            }
-            <a class="sv-btn sv-btn--ghost sv-btn--sm"
-               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage - 1)"
-               style="@(prevDisabled ? "pointer-events:none;opacity:.4;" : "")">
-                <i class="bi bi-chevron-left"></i> Sebelumnya
-            </a>
-            <span class="sv-simple-pager__label">Halaman @Model.CurrentPage dari @(Math.Max(Model.TotalPages, 1))</span>
-            <a class="sv-btn sv-btn--ghost sv-btn--sm"
-               asp-action="Responses" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage + 1)"
-               style="@(nextDisabled ? "pointer-events:none;opacity:.4;" : "")">
-                Selanjutnya <i class="bi bi-chevron-right"></i>
-            </a>
         </div>
     }
     else

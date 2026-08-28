@@ -14,8 +14,11 @@ public class AssignmentController : Controller
     }
 
     // GET: /Assignment
-    public async Task<IActionResult> Index(string? status, string? surveyorId)
+    public async Task<IActionResult> Index(string? status, string? surveyorId, int page = 1)
     {
+        const int pageSize = 10;
+        if (page < 1) page = 1;
+
         var query = _context.SurveyAssignments
             .Include(a => a.FormVersion)
                 .ThenInclude(v => v.Form)
@@ -27,12 +30,23 @@ public class AssignmentController : Controller
         if (!string.IsNullOrWhiteSpace(surveyorId))
             query = query.Where(a => a.SurveyorId != null && a.SurveyorId.Contains(surveyorId));
 
-        var items = await query.OrderByDescending(a => a.AssignedAt).ToListAsync();
+        query = query.OrderByDescending(a => a.AssignedAt);
+
+        var totalCount = await query.CountAsync();
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        var vm = new AssignmentListViewModel
+        {
+            Items = items,
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            FilterStatus = status,
+            FilterSurveyorId = surveyorId
+        };
 
         ViewData["ActiveMenu"] = "assignment";
-        ViewData["FilterStatus"] = status;
-        ViewData["FilterSurveyorId"] = surveyorId;
-        return View(items);
+        return View(vm);
     }
 
     // GET: /Assignment/Create

@@ -1,4 +1,4 @@
-@model List<SurveyFormApp.Models.SurveyAssignment>
+@model SurveyFormApp.Models.AssignmentListViewModel
 @{
     ViewData["Title"] = "Daftar Assignment";
     ViewData["ActiveMenu"] = "assignment";
@@ -35,17 +35,54 @@
 .sv-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end;}
 .sv-filter-bar .sv-filter-field{min-width:160px;}
 
+.sv-page-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  margin-bottom:22px;
+}
+.sv-page-header .sv-title{margin:0;}
+.sv-simple-pager{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+.sv-simple-pager__label{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+
 @@media(max-width:768px){
   .sf-table thead{display:none;}
   .sf-table, .sf-table tbody, .sf-table tr, .sf-table td{display:block;width:100%;}
   .sf-table tbody tr{border:1px solid var(--border);border-radius:12px;margin-bottom:12px;padding:14px;}
   .sf-table tbody td{border-bottom:none;padding:6px 0;}
+  .sv-page-header{flex-direction:column;align-items:flex-start;}
 }
 </style>
 }
 
 <p class="sv-eyebrow">Survei Digital</p>
-<h1 class="sv-title">Daftar Assignment</h1>
+<div class="sv-page-header">
+    <h1 class="sv-title">Daftar Assignment</h1>
+
+    @if (Model.Items.Count > 0)
+    {
+        <div class="sv-simple-pager">
+            @{
+                var prevDisabled = Model.CurrentPage <= 1;
+                var nextDisabled = Model.CurrentPage >= Model.TotalPages;
+                var routeValues = new Dictionary<string, string?>
+                {
+                    ["status"] = Model.FilterStatus,
+                    ["surveyorId"] = Model.FilterSurveyorId
+                };
+            }
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Index" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage - 1)"
+               style="@(prevDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                <i class="bi bi-chevron-left"></i> Sebelumnya
+            </a>
+            <span class="sv-simple-pager__label">Halaman @Model.CurrentPage dari @(Math.Max(Model.TotalPages, 1))</span>
+            <a class="sv-btn sv-btn--ghost sv-btn--sm"
+               asp-action="Index" asp-all-route-data="routeValues" asp-route-page="@(Model.CurrentPage + 1)"
+               style="@(nextDisabled ? "pointer-events:none;opacity:.4;" : "")">
+                Selanjutnya <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    }
+</div>
 
 @if (TempData["Success"] != null)
 {
@@ -62,14 +99,14 @@
             <label class="form-label">Status</label>
             <select name="status" class="form-select">
                 <option value="">Semua Status</option>
-                <option value="ASSIGNED" selected="@(ViewData["FilterStatus"]?.ToString() == "ASSIGNED")">Assigned</option>
-                <option value="COMPLETED" selected="@(ViewData["FilterStatus"]?.ToString() == "COMPLETED")">Completed</option>
-                <option value="CANCELED" selected="@(ViewData["FilterStatus"]?.ToString() == "CANCELED")">Canceled</option>
+                <option value="ASSIGNED" selected="@(Model.FilterStatus == "ASSIGNED")">Assigned</option>
+                <option value="COMPLETED" selected="@(Model.FilterStatus == "COMPLETED")">Completed</option>
+                <option value="CANCELED" selected="@(Model.FilterStatus == "CANCELED")">Canceled</option>
             </select>
         </div>
         <div class="sv-filter-field">
             <label class="form-label">Surveyor</label>
-            <input type="text" name="surveyorId" class="form-control" value="@ViewData["FilterSurveyorId"]" placeholder="Cari nama surveyor" />
+            <input type="text" name="surveyorId" class="form-control" value="@Model.FilterSurveyorId" placeholder="Cari nama surveyor" />
         </div>
         <div class="sv-filter-field">
             <button type="submit" class="sv-btn sv-btn--primary">Filter</button>
@@ -80,7 +117,7 @@
         </div>
     </form>
 
-    @if (Model != null && Model.Count > 0)
+    @if (Model.Items.Count > 0)
     {
         <div class="sf-table-wrap">
             <table class="sf-table">
@@ -88,7 +125,7 @@
                     <tr><th>Application ID</th><th>Form</th><th>Surveyor</th><th>Cabang</th><th>Status</th><th>Ditugaskan</th><th>Batas Waktu</th><th></th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var a in Model)
+                    @foreach (var a in Model.Items)
                     {
                         var statusClass = (a.Status?.ToUpper()) switch
                         {
