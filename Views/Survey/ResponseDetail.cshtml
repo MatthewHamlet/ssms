@@ -26,16 +26,26 @@
   border-top-left-radius:0;
   border-top-right-radius:0;
 }
+.sv-answers-footer{
+  border-top:1px solid var(--border);
+}
 
 /* Nav sekarang jadi baris header tabel, bukan ngambang di luar card */
 .sv-answers-header{
   position:sticky;
+  top:var(--topbar-h);
   z-index:402;
   background:#fff;
   display:flex;align-items:center;justify-content:space-between;
   padding:14px 32px;
   border-bottom:1px solid var(--border);
 }
+.sv-answers-col-labels{
+  display:flex;gap:32px;
+  font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--ink-faint);
+}
+.sv-table--no-head thead{display:none;}
 .sv-answers-header__title{font-size:15px;font-weight:700;color:var(--ink);}
 
 .sv-table-nav{
@@ -58,18 +68,26 @@
 .sv-table-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .sv-table-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
 .sv-table-nav__input:disabled{background:#f3f4f6;color:var(--ink-faint);cursor:not-allowed;}
-
-.sv-answers-card table.sv-table thead th{
-  position:sticky;
-  z-index:400;
-  background:#fff;
-  top:0; /* di-override oleh JS jadi tinggi kartu info + header nav yang sebenarnya */
-}
 </style>
 }
 
-<p class="sv-eyebrow">Daftar Jawaban</p>
-<h1 class="sv-title">Detail Jawaban</h1>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <p class="sv-eyebrow">Daftar Jawaban</p>
+        <h1 class="sv-title mb-0">Detail Jawaban</h1>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a asp-action="Responses" class="sv-btn sv-btn--ghost sv-btn--sm">
+            <i class="bi bi-arrow-left"></i> Kembali ke Daftar Jawaban
+        </a>
+        <form asp-action="DeleteResponse" method="post" onsubmit="return confirm('Hapus jawaban survey ini beserta seluruh datanya? Tindakan ini tidak bisa dibatalkan.');">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">
+                <i class="bi bi-trash"></i> Hapus Response
+            </button>
+        </form>
+    </div>
+</div>
 
 <div class="sv-sticky-block">
     <div class="sv-card sv-response-info" id="svResponseInfo">
@@ -110,23 +128,26 @@
 
 <div class="sv-card sv-answers-card p-0">
 <div class="sv-answers-header" id="answersHeaderBar">
-    <div class="d-flex gap-2 align-items-center">
-        <a asp-action="Responses" class="sv-btn sv-btn--ghost sv-btn--sm">
-            <i class="bi bi-arrow-left"></i> Kembali ke Daftar Jawaban
-        </a>
-        <form asp-action="DeleteResponse" method="post" onsubmit="return confirm('Hapus jawaban survey ini beserta seluruh datanya? Tindakan ini tidak bisa dibatalkan.');">
-            <input type="hidden" name="id" value="@Model.Id" />
-            <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">
-                <i class="bi bi-trash"></i> Hapus Response
-            </button>
-        </form>
+    <div class="sv-answers-col-labels">
+        <span>Section</span>
+        <span>Pertanyaan</span>
+        <span>Jawaban</span>
     </div>
-    ...
+    <div class="sv-table-nav" id="answersNav">
+        <button type="button" class="sv-table-nav__btn" id="btnAnswersPrev" title="Halaman sebelumnya">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <span class="sv-table-nav__label">
+            Hal <input type="number" class="sv-table-nav__input" id="answersNavInput" min="1" value="1" />
+            dari <span id="answersNavTotal">1</span>
+        </span>
+        <button type="button" class="sv-table-nav__btn" id="btnAnswersNext" title="Halaman selanjutnya">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+</div>
     <div class="px-4">
-    <table class="sv-table">
-        <thead>
-            <tr><th>Section</th><th>Pertanyaan</th><th>Jawaban</th><th></th></tr>
-        </thead>
+    <table class="sv-table sv-table--no-head">
         <tbody id="answersTbody">
             @foreach (var a in Model.SurveyAnswers.OrderBy(a => a.Question.OrderNo))
             {
@@ -150,33 +171,76 @@
 </div>
 
 
-@section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    function positionStickyHeader() {
+    function positionHeaderBar() {
         var infoCard = document.getElementById('svResponseInfo');
         var headerBar = document.getElementById('answersHeaderBar');
-        var thead = document.querySelector('.sv-answers-card table.sv-table thead th');
-        if (!infoCard || !headerBar || !thead) return;
+        if (!infoCard || !headerBar) return;
 
         var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
-        var infoHeight = infoCard.offsetHeight;
-        var headerBarHeight = headerBar.offsetHeight;
-
-        // Header bar (judul + nav halaman) nempel tepat di bawah info card
-        headerBar.style.top = (topbarH + infoHeight) + 'px';
-
-        // Header kolom tabel nempel tepat di bawah header bar itu
-        var stickyTop = topbarH + infoHeight + headerBarHeight;
-        document.querySelectorAll('.sv-answers-card table.sv-table thead th').forEach(function (th) {
-            th.style.top = stickyTop + 'px';
-        });
+        headerBar.style.top = (topbarH + infoCard.offsetHeight) + 'px';
     }
 
-    positionStickyHeader();
-    window.addEventListener('resize', positionStickyHeader);
+    positionHeaderBar();
+    window.addEventListener('resize', positionHeaderBar);
 
-    initTablePager({ tbodySelector: '#answersTbody', navId: 'answersNav', pageSize: 10 });
+    initAnswersPager({ tbodyId: 'answersTbody', pageSize: 10 });
 });
-</script>
+
+function initAnswersPager(opts) {
+    var pageSize = opts.pageSize || 10;
+    var tbody = document.getElementById(opts.tbodyId);
+    if (!tbody) return;
+
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    var totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+    var current = 1;
+
+    var nav = document.getElementById('answersNav');
+    var btnPrev = document.getElementById('btnAnswersPrev');
+    var btnNext = document.getElementById('btnAnswersNext');
+    var input = document.getElementById('answersNavInput');
+    var totalLabel = document.getElementById('answersNavTotal');
+
+    if (!nav || !btnPrev || !btnNext || !input || !totalLabel) return;
+
+    if (rows.length <= pageSize) {
+        nav.style.display = 'none';
+    }
+
+    input.max = totalPages;
+    totalLabel.textContent = totalPages;
+
+    function render() {
+        rows.forEach(function (row, idx) {
+            var page = Math.floor(idx / pageSize) + 1;
+            row.style.display = page === current ? '' : 'none';
+        });
+        input.value = current;
+        btnPrev.disabled = current === 1;
+        btnNext.disabled = current === totalPages;
+    }
+
+    function goTo(page) {
+        page = Math.max(1, Math.min(totalPages, page));
+        current = page;
+        render();
+    }
+
+    btnPrev.addEventListener('click', function () { goTo(current - 1); });
+    btnNext.addEventListener('click', function () { goTo(current + 1); });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            goTo(parseInt(input.value, 10) || 1);
+            input.blur();
+        }
+    });
+    input.addEventListener('blur', function () {
+        goTo(parseInt(input.value, 10) || 1);
+    });
+
+    render();
 }
+</script>
