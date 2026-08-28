@@ -1,8 +1,9 @@
-@model List<SurveyFormApp.Models.SurveyForm>
+@model List<SurveyFormApp.Models.SurveyAssignment>
 @{
     ViewData["Title"] = "Daftar Form";
     ViewData["ActiveMenu"] = "surveyindex";
     Layout = "_SidebarLayout";
+    var currentSurveyor = ViewData["CurrentSurveyor"] as string;
 }
 
 @section Styles {
@@ -37,6 +38,8 @@
 .sf-fill-btn:hover{background:var(--sf-gold-dark);color:#0f172a;}
 .sf-empty{text-align:center;padding:60px 20px;color:var(--ink-faint);}
 .sf-empty i{font-size:38px;display:block;margin-bottom:12px;color:var(--ink-faint);}
+.sv-surveyor-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.sv-surveyor-name{font-weight:700;color:var(--ink);}
 
 @@media(max-width:768px){
   .sf-table thead{display:none;}
@@ -51,37 +54,62 @@
 <p class="sv-eyebrow">Survei Digital</p>
 <h1 class="sv-title">Daftar Form Survey</h1>
 
-<div class="sv-card">
-    @if (Model != null && Model.Count > 0)
-    {
-        <div class="sf-table-wrap">
-            <table class="sf-table">
-                <thead>
-                    <tr><th>Kode Form</th><th>Nama Form</th><th>Tipe Produk</th><th></th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var form in Model)
-                    {
-                        <tr>
-                            <td><span class="sf-form-code">@form.FormCode</span></td>
-                            <td class="sf-form-name">@form.FormName</td>
-                            <td><span class="sf-badge">@(form.ProductType ?? "-")</span></td>
-                            <td>
-                                <a asp-action="Fill" asp-route-id="@form.Id" class="sf-fill-btn">
-                                    <i class="bi bi-pencil-square"></i> Isi Form
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="sf-empty">
-            <i class="bi bi-inbox"></i>
-            Belum ada form survey yang aktif.
-        </div>
-    }
-</div>
+@if (string.IsNullOrWhiteSpace(currentSurveyor))
+{
+    <div class="sv-card">
+        <p class="mb-3">Masukkan nama kamu sebagai surveyor untuk melihat form survey yang ditugaskan ke kamu.</p>
+        <form asp-action="SetSurveyor" method="post" class="row g-2">
+            <div class="col-md-6">
+                <input name="surveyorName" class="form-control" placeholder="Nama kamu" required />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="sv-btn sv-btn--primary">Masuk</button>
+            </div>
+        </form>
+    </div>
+}
+else
+{
+    <div class="sv-surveyor-bar">
+        <span>Masuk sebagai: <span class="sv-surveyor-name">@currentSurveyor</span></span>
+        <form asp-action="Logout" method="post">
+            <button type="submit" class="sv-btn sv-btn--ghost sv-btn--sm">Ganti Surveyor</button>
+        </form>
+    </div>
+
+    <div class="sv-card">
+        @if (Model != null && Model.Count > 0)
+        {
+            <div class="sf-table-wrap">
+                <table class="sf-table">
+                    <thead>
+                        <tr><th>Application ID</th><th>Nama Form</th><th>Cabang</th><th>Batas Waktu</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td><span class="sf-form-code">@a.ApplicationId</span></td>
+                                <td class="sf-form-name">@a.FormVersion?.Form?.FormName</td>
+                                <td><span class="sf-badge">@(a.BranchId ?? "-")</span></td>
+                                <td>@(a.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>
+                                    <a asp-action="Fill" asp-route-id="@a.Id" class="sf-fill-btn">
+                                        <i class="bi bi-pencil-square"></i> Isi Form
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="sf-empty">
+                <i class="bi bi-inbox"></i>
+                Belum ada survey yang ditugaskan ke kamu.
+            </div>
+        }
+    </div>
+}

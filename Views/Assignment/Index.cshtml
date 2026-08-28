@@ -1,0 +1,132 @@
+@model List<SurveyFormApp.Models.SurveyAssignment>
+@{
+    ViewData["Title"] = "Daftar Assignment";
+    ViewData["ActiveMenu"] = "assignment";
+    Layout = "_SidebarLayout";
+}
+
+@section Styles {
+<style>
+.sf-table-wrap{overflow-x:auto;}
+.sf-table{width:100%;border-collapse:collapse;}
+.sf-table thead th{
+  text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--ink-faint);
+  padding:0 16px 12px;border-bottom:2px solid var(--border);
+}
+.sf-table tbody td{
+  padding:16px;border-bottom:1px solid var(--border);
+  font-size:14.5px;color:var(--ink);vertical-align:middle;
+}
+.sf-table tbody tr:last-child td{border-bottom:none;}
+.sf-table tbody tr:hover{background:#fafbfc;}
+.sf-status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;
+  text-transform:capitalize;
+}
+.sf-status i{font-size:8px;}
+.sf-status--assigned{background:#fff6e0;color:#8a5a00;}
+.sf-status--completed{background:#e6f9f5;color:#00a896;}
+.sf-status--canceled{background:#fdeaea;color:#b91c1c;}
+.sf-status--default{background:#f1f5f9;color:var(--ink-soft);}
+.sf-empty{text-align:center;padding:60px 20px;color:var(--ink-faint);}
+.sf-empty i{font-size:38px;display:block;margin-bottom:12px;color:var(--ink-faint);}
+.sv-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end;}
+.sv-filter-bar .sv-filter-field{min-width:160px;}
+
+@@media(max-width:768px){
+  .sf-table thead{display:none;}
+  .sf-table, .sf-table tbody, .sf-table tr, .sf-table td{display:block;width:100%;}
+  .sf-table tbody tr{border:1px solid var(--border);border-radius:12px;margin-bottom:12px;padding:14px;}
+  .sf-table tbody td{border-bottom:none;padding:6px 0;}
+}
+</style>
+}
+
+<p class="sv-eyebrow">Survei Digital</p>
+<h1 class="sv-title">Daftar Assignment</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="sv-card">
+    <form method="get" asp-action="Index" class="sv-filter-bar">
+        <div class="sv-filter-field">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="">Semua Status</option>
+                <option value="ASSIGNED" selected="@(ViewData["FilterStatus"]?.ToString() == "ASSIGNED")">Assigned</option>
+                <option value="COMPLETED" selected="@(ViewData["FilterStatus"]?.ToString() == "COMPLETED")">Completed</option>
+                <option value="CANCELED" selected="@(ViewData["FilterStatus"]?.ToString() == "CANCELED")">Canceled</option>
+            </select>
+        </div>
+        <div class="sv-filter-field">
+            <label class="form-label">Surveyor</label>
+            <input type="text" name="surveyorId" class="form-control" value="@ViewData["FilterSurveyorId"]" placeholder="Cari nama surveyor" />
+        </div>
+        <div class="sv-filter-field">
+            <button type="submit" class="sv-btn sv-btn--primary">Filter</button>
+            <a asp-action="Index" class="sv-btn sv-btn--ghost">Reset</a>
+        </div>
+        <div class="sv-filter-field" style="margin-left:auto;">
+            <a asp-action="Create" class="sv-btn sv-btn--submit">+ Assign Survey Baru</a>
+        </div>
+    </form>
+
+    @if (Model != null && Model.Count > 0)
+    {
+        <div class="sf-table-wrap">
+            <table class="sf-table">
+                <thead>
+                    <tr><th>Application ID</th><th>Form</th><th>Surveyor</th><th>Cabang</th><th>Status</th><th>Ditugaskan</th><th>Batas Waktu</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model)
+                    {
+                        var statusClass = (a.Status?.ToUpper()) switch
+                        {
+                            "ASSIGNED" => "sf-status--assigned",
+                            "COMPLETED" => "sf-status--completed",
+                            "CANCELED" => "sf-status--canceled",
+                            _ => "sf-status--default"
+                        };
+
+                        <tr>
+                            <td>@a.ApplicationId</td>
+                            <td>@a.FormVersion?.Form?.FormName</td>
+                            <td>@(a.SurveyorId ?? "-")</td>
+                            <td>@(a.BranchId ?? "-")</td>
+                            <td><span class="sf-status @statusClass"><i class="bi bi-circle-fill"></i>@a.Status</span></td>
+                            <td>@a.AssignedAt.ToString("dd MMM yyyy, HH:mm")</td>
+                            <td>@(a.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td class="text-nowrap">
+                                @if (a.Status == "ASSIGNED")
+                                {
+                                    <a asp-action="Edit" asp-route-id="@a.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Edit</a>
+                                    <form asp-action="Cancel" method="post" style="display:inline" onsubmit="return confirm('Batalkan assignment ini?');">
+                                        <input type="hidden" name="id" value="@a.Id" />
+                                        <button type="submit" class="sv-btn sv-btn--danger sv-btn--sm">Batalkan</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="sf-empty">
+            <i class="bi bi-inbox"></i>
+            Belum ada assignment.
+        </div>
+    }
+</div>

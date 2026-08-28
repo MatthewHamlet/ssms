@@ -24,45 +24,95 @@ public class SurveyController : Controller
         _context = context;
     }
 
+    // GET: /Survey  -> daftar assignment milik surveyor yang lagi "login"
     public async Task<IActionResult> Index()
     {
-        var forms = await _context.SurveyForms
-            .Where(f => f.IsActive && f.SurveyFormVersions.Any(v => v.IsPublished))
+        var currentSurveyor = HttpContext.Session.GetString("SurveyorId");
+        ViewData["ActiveMenu"] = "surveyindex";
+        ViewData["CurrentSurveyor"] = currentSurveyor;
+
+        if (string.IsNullOrWhiteSpace(currentSurveyor))
+        {
+            return View(new List<SurveyAssignment>());
+        }
+
+        var assignments = await _context.SurveyAssignments
+            .Include(a => a.FormVersion)
+                .ThenInclude(v => v.Form)
+            .Where(a => a.Status == "ASSIGNED"
+                     && a.SurveyorId != null
+                     && a.SurveyorId.ToLower() == currentSurveyor.ToLower())
+            .OrderBy(a => a.DueDate ?? DateTime.MaxValue)
             .ToListAsync();
 
-        return View(forms);
+        return View(assignments);
     }
 
+    // POST: /Survey/SetSurveyor -> "login" simpel pakai nama, disimpan di Session
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult SetSurveyor(string surveyorName)
+    {
+        if (!string.IsNullOrWhiteSpace(surveyorName))
+        {
+            HttpContext.Session.SetString("SurveyorId", surveyorName.Trim());
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    // POST: /Survey/Logout -> ganti surveyor
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Logout()
+    {
+        HttpContext.Session.Remove("SurveyorId");
+        return RedirectToAction(nameof(Index));
+    }
+
+    // GET: /Survey/Fill/5  -> id = assignmentId
     public async Task<IActionResult> Fill(long id)
     {
-        var version = await _context.SurveyFormVersions
-            .Where(v => v.FormId == id && v.IsPublished)
-            .OrderByDescending(v => v.VersionNo)
-            .Include(v => v.SurveySections)
-                .ThenInclude(s => s.SurveyQuestions.OrderBy(q => q.OrderNo))
-                    .ThenInclude(q => q.SurveyQuestionOptions)
-            .Include(v => v.SurveySections)
-                .ThenInclude(s => s.SurveyQuestions)
-                    .ThenInclude(q => q.SurveyQuestionRuleQuestions)
-            .FirstOrDefaultAsync();
+        var assignment = await _context.SurveyAssignments
+            .Include(a => a.FormVersion)
+                .ThenInclude(v => v.SurveySections)
+                    .ThenInclude(s => s.SurveyQuestions.OrderBy(q => q.OrderNo))
+                        .ThenInclude(q => q.SurveyQuestionOptions)
+            .Include(a => a.FormVersion)
+                .ThenInclude(v => v.SurveySections)
+                    .ThenInclude(s => s.SurveyQuestions)
+                        .ThenInclude(q => q.SurveyQuestionRuleQuestions)
+            .FirstOrDefaultAsync(a => a.Id == id);
 
-        if (version == null)
+        if (assignment == null)
         {
-            return NotFound("Form ini belum punya versi yang di-publish.");
+            return NotFound("Assignment tidak ditemukan.");
+        }
+
+        if (assignment.Status != "ASSIGNED" || !assignment.FormVersion.IsPublished)
+        {
+            return NotFound("Assignment ini sudah tidak aktif atau form-nya sudah tidak di-publish.");
+        }
+
+        var sessionSurveyor = HttpContext.Session.GetString("SurveyorId");
+        if (string.IsNullOrWhiteSpace(sessionSurveyor) ||
+            !string.Equals(sessionSurveyor, assignment.SurveyorId, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Error"] = "Assignment ini bukan milik kamu.";
+            return RedirectToAction(nameof(Index));
         }
 
         ViewData["ActiveMenu"] = "surveyindex";
-        return View(version);
+        ViewData["CurrentSurveyor"] = sessionSurveyor;
+        return View(assignment);
     }
 
-    // POST: /Survey/Fill  -> simpan jawaban
+    // POST: /Survey/Fill  -> simpan jawaban, assignmentId = assignment yang lagi diisi
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Fill(
-        long formVersionId,
+        long assignmentId,
         Dictionary<long, string> answers,
         Dictionary<long, IFormFile> photos,
-        string? surveyorName,
         decimal? latitude,
         decimal? longitude,
         decimal? debtorLatitude,
@@ -74,31 +124,35 @@ public class SurveyController : Controller
         answers ??= new Dictionary<long, string>();
         photos ??= new Dictionary<long, IFormFile>();
 
-        // ===== 1. Validasi formVersionId: harus ada & masih published =====
-        var version = await _context.SurveyFormVersions
-            .Where(v => v.Id == formVersionId && v.IsPublished)
-            .Include(v => v.SurveySections)
-                .ThenInclude(s => s.SurveyQuestions.OrderBy(q => q.OrderNo))
-                    .ThenInclude(q => q.SurveyQuestionOptions)
-            .Include(v => v.SurveySections)
-                .ThenInclude(s => s.SurveyQuestions)
-                    .ThenInclude(q => q.SurveyQuestionRuleQuestions)
-            .FirstOrDefaultAsync();
+        // ===== 1. Validasi assignment: harus ada, masih ASSIGNED, form masih published =====
+        var assignment = await _context.SurveyAssignments
+            .Include(a => a.FormVersion)
+                .ThenInclude(v => v.SurveySections)
+                    .ThenInclude(s => s.SurveyQuestions.OrderBy(q => q.OrderNo))
+                        .ThenInclude(q => q.SurveyQuestionOptions)
+            .Include(a => a.FormVersion)
+                .ThenInclude(v => v.SurveySections)
+                    .ThenInclude(s => s.SurveyQuestions)
+                        .ThenInclude(q => q.SurveyQuestionRuleQuestions)
+            .FirstOrDefaultAsync(a => a.Id == assignmentId);
 
-        if (version == null)
+        if (assignment == null || assignment.Status != "ASSIGNED" || !assignment.FormVersion.IsPublished)
         {
-            return NotFound("Versi form ini tidak valid atau sudah tidak di-publish. Silakan buka ulang form dari daftar.");
+            return NotFound("Assignment ini tidak valid, sudah selesai, atau form-nya sudah tidak di-publish.");
         }
 
+        var sessionSurveyor = HttpContext.Session.GetString("SurveyorId");
+        if (string.IsNullOrWhiteSpace(sessionSurveyor) ||
+            !string.Equals(sessionSurveyor, assignment.SurveyorId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Forbid();
+        }
+
+        var version = assignment.FormVersion;
         var allQuestions = version.SurveySections.SelectMany(s => s.SurveyQuestions).ToList();
 
         // ===== 2. Validasi server-side: field wajib (menghormati rule show/hide) =====
         var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(surveyorName) && string.IsNullOrWhiteSpace(HttpContext.Session.GetString("SurveyorId")))
-        {
-            errors.Add("Nama surveyor wajib diisi.");
-        }
 
         foreach (var q in allQuestions)
         {
@@ -141,35 +195,20 @@ public class SurveyController : Controller
         if (errors.Count > 0)
         {
             ViewData["ActiveMenu"] = "surveyindex";
+            ViewData["CurrentSurveyor"] = sessionSurveyor;
             ViewData["Errors"] = errors;
-            return View(version);
+            return View(assignment);
         }
 
-        // ===== 4. Simpan assignment & response =====
-        var surveyorId = !string.IsNullOrWhiteSpace(surveyorName)
-            ? surveyorName.Trim()
-            : (HttpContext.Session.GetString("SurveyorId") ?? "anonymous");
-
-        if (!string.IsNullOrWhiteSpace(surveyorName))
-            HttpContext.Session.SetString("SurveyorId", surveyorId);
-
-        var assignment = new SurveyAssignment
-        {
-            ApplicationId = Guid.NewGuid().ToString(),
-            FormVersionId = formVersionId,
-            AssignedAt = DateTime.Now
-        };
-        _context.SurveyAssignments.Add(assignment);
-        await _context.SaveChangesAsync();
-
+        // ===== 4. Simpan response, terikat ke assignment yang sudah ada =====
         var response = new SurveyResponse
         {
             AssignmentId = assignment.Id,
-            SurveyorId = surveyorId,
+            SurveyorId = assignment.SurveyorId ?? sessionSurveyor,
             StartedAt = DateTime.Now,
             SubmittedAt = DateTime.Now,
             Status = "SUBMITTED",
-            FormVersionId = formVersionId,
+            FormVersionId = assignment.FormVersionId,
             Latitude = latitude,
             Longitude = longitude,
             DeviceId = deviceId,
@@ -321,6 +360,10 @@ public class SurveyController : Controller
                 CalculatedAt = DateTime.Now
             });
         }
+
+        // ===== 9. Tandai assignment selesai =====
+        assignment.Status = "COMPLETED";
+        assignment.CompletedAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
 

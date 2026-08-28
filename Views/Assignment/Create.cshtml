@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "Assign Survey Baru";
+    ViewData["ActiveMenu"] = "assignment";
+    Layout = "_SidebarLayout";
+    var forms = ViewBag.Forms as List<SurveyFormApp.Models.SurveyForm> ?? new();
+}
+
+<p class="sv-eyebrow">Survei Digital</p>
+<h1 class="sv-title">Assign Survey Baru</h1>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="sv-card">
+    <form asp-action="Create" method="post" class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Form Survey</label>
+            <select name="formId" class="form-select" required>
+                <option value="">-- Pilih Form --</option>
+                @foreach (var f in forms)
+                {
+                    <option value="@f.Id">@f.FormName (@f.FormCode)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Application ID</label>
+            <input name="applicationId" class="form-control" placeholder="cth: APP-2026-0001" required />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Surveyor</label>
+            <input name="surveyorId" class="form-control" placeholder="Nama / ID surveyor" required />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Cabang (opsional)</label>
+            <input name="branchId" class="form-control" placeholder="cth: JKT-01" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Prioritas (opsional)</label>
+            <input type="number" name="priority" class="form-control" placeholder="cth: 1 = tertinggi" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Batas Waktu (opsional)</label>
+            <input type="date" name="dueDate" class="form-control" />
+        </div>
+        <div class="col-12">
+            <button type="submit" class="sv-btn sv-btn--primary">Simpan Assignment</button>
+            <a asp-action="Index" class="sv-btn sv-btn--ghost">Batal</a>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,57 @@
+@model SurveyFormApp.Models.SurveyAssignment
+@{
+    ViewData["Title"] = "Edit Assignment";
+    ViewData["ActiveMenu"] = "assignment";
+    Layout = "_SidebarLayout";
+    var forms = ViewBag.Forms as List<SurveyFormApp.Models.SurveyForm> ?? new();
+    var currentFormId = Model.FormVersion?.Form?.Id;
+}
+
+<p class="sv-eyebrow">Survei Digital</p>
+<h1 class="sv-title">Edit Assignment</h1>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="sv-card">
+    <form asp-action="Edit" method="post" class="row g-3">
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="col-md-6">
+            <label class="form-label">Form Survey</label>
+            <select name="formId" class="form-select" required>
+                <option value="">-- Pilih Form --</option>
+                @foreach (var f in forms)
+                {
+                    <option value="@f.Id" selected="@(f.Id == currentFormId)">@f.FormName (@f.FormCode)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Application ID</label>
+            <input name="applicationId" class="form-control" value="@Model.ApplicationId" required />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Surveyor</label>
+            <input name="surveyorId" class="form-control" value="@Model.SurveyorId" required />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Cabang (opsional)</label>
+            <input name="branchId" class="form-control" value="@Model.BranchId" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Prioritas (opsional)</label>
+            <input type="number" name="priority" class="form-control" value="@Model.Priority" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Batas Waktu (opsional)</label>
+            <input type="date" name="dueDate" class="form-control" value="@(Model.DueDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-12">
+            <button type="submit" class="sv-btn sv-btn--primary">Simpan Perubahan</button>
+            <a asp-action="Index" class="sv-btn sv-btn--ghost">Batal</a>
+        </div>
+    </form>
+</div>

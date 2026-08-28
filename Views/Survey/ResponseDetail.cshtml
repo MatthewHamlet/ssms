@@ -7,49 +7,55 @@
 
 @section Styles {
 <style>
-.sv-sticky-block{
-  position:sticky;
-  top:var(--topbar-h);
-  z-index:401;
-  background:#EEF2F7;
-  padding-top:10px;
-  margin-top:-10px;
-}
-.sv-response-info.sv-card{
-  margin-bottom:0;
-  border-bottom-left-radius:0;
-  border-bottom-right-radius:0;
-  box-shadow:var(--shadow-md);
-}
 .sv-answers-card{
   margin-top:0;
-  border-top-left-radius:0;
-  border-top-right-radius:0;
-}
-.sv-answers-footer{
-  border-top:1px solid var(--border);
 }
 
-/* Nav sekarang jadi baris header tabel, bukan ngambang di luar card */
-.sv-answers-header{
+/* Tabel jawaban: thead & tbody share lebar kolom yang sama lewat <colgroup>,
+   jadi header selalu lurus sama isi baris di bawahnya. */
+.sv-answers-table{
+  table-layout:fixed;
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+.sv-answers-table thead th{
   position:sticky;
   top:var(--topbar-h);
-  z-index:402;
+  z-index:400;
   background:#fff;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 32px;
-  border-bottom:1px solid var(--border);
-}
-.sv-answers-col-labels{
-  display:flex;gap:32px;
+  text-align:left;
   font-size:12px;font-weight:700;text-transform:uppercase;
   letter-spacing:.04em;color:var(--ink-faint);
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
 }
-.sv-table--no-head thead{display:none;}
-.sv-answers-header__title{font-size:15px;font-weight:700;color:var(--ink);}
+.sv-answers-table thead th:first-child{ padding-left:32px; }
+.sv-answers-table thead th:last-child{ padding-right:32px; }
+.sv-answers-table tbody td{
+  padding:12px 16px;
+  border-bottom:1px solid #f1f2f4;
+  font-size:14.5px;color:var(--ink);vertical-align:middle;
+}
+.sv-answers-table tbody tr:last-child td{ border-bottom:none; }
+.sv-answers-table tbody tr:hover td{ background:#fafbfc; }
+.sv-answers-table tbody td:first-child{ padding-left:32px; }
+.sv-answers-table tbody td:last-child{ padding-right:32px; }
+.sv-answers-table tbody tr.sv-row-filtered-out{ display:none; }
+
+.sv-th-with-filter{ display:flex; align-items:center; gap:8px; }
+.sv-section-filter{
+  font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-soft);
+  border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:#fff;
+  cursor:pointer;max-width:130px;
+}
+.sv-section-filter:focus{ outline:none; border-color:var(--purple); }
+
+.sv-answers-th-actions{ text-align:right; }
 
 .sv-table-nav{
-  display:flex;align-items:center;gap:10px;
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
 }
 .sv-table-nav__btn{
   width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
@@ -68,10 +74,15 @@
 .sv-table-nav__input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .sv-table-nav__input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-tint);}
 .sv-table-nav__input:disabled{background:#f3f4f6;color:var(--ink-faint);cursor:not-allowed;}
+
+@@media(max-width:768px){
+  .sv-th-with-filter{ flex-direction:column; align-items:flex-start; gap:4px; }
+  .sv-section-filter{ max-width:none; width:100%; }
+}
 </style>
 }
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 pb-4">
     <div>
         <p class="sv-eyebrow">Daftar Jawaban</p>
         <h1 class="sv-title mb-0">Detail Jawaban</h1>
@@ -89,12 +100,10 @@
     </div>
 </div>
 
-<div class="sv-sticky-block">
-    <div class="sv-card sv-response-info" id="svResponseInfo">
-        <p><strong>Form:</strong> @Model.Assignment?.FormVersion?.Form?.FormName</p>
-        <p><strong>Surveyor:</strong> @Model.SurveyorId</p>
-        <p><strong>Waktu Submit:</strong> @Model.SubmittedAt</p>
-    </div>
+<div class="sv-card sv-response-info" id="svResponseInfo">
+    <p><strong>Form:</strong> @Model.Assignment?.FormVersion?.Form?.FormName</p>
+    <p><strong>Surveyor:</strong> @Model.SurveyorId</p>
+    <p><strong>Waktu Submit:</strong> @Model.SubmittedAt</p>
 </div>
 
 @if (Model.SurveyScore != null || Model.SurveyGeoValidation != null || (Model.SurveyFraudFlags != null && Model.SurveyFraudFlags.Any()))
@@ -127,35 +136,49 @@
 }
 
 <div class="sv-card sv-answers-card p-0">
-<div class="sv-answers-header" id="answersHeaderBar">
-    <div class="sv-answers-col-labels">
-        <span>Section</span>
-        <span>Pertanyaan</span>
-        <span>Jawaban</span>
-    </div>
-    <div class="sv-table-nav" id="answersNav">
-        <button type="button" class="sv-table-nav__btn" id="btnAnswersPrev" title="Halaman sebelumnya">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <span class="sv-table-nav__label">
-            Hal <input type="number" class="sv-table-nav__input" id="answersNavInput" min="1" value="1" />
-            dari <span id="answersNavTotal">1</span>
-        </span>
-        <button type="button" class="sv-table-nav__btn" id="btnAnswersNext" title="Halaman selanjutnya">
-            <i class="bi bi-chevron-right"></i>
-        </button>
-    </div>
-</div>
-    <div class="px-4">
-    <table class="sv-table sv-table--no-head">
+    <table class="sv-table sv-answers-table">
+        <colgroup>
+            <col style="width:20%">
+            <col style="width:34%">
+            <col style="width:30%">
+            <col style="width:16%">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>
+                    <div class="sv-th-with-filter">
+                        <span>Section</span>
+                        <select id="answersSectionFilter" class="sv-section-filter" title="Filter berdasarkan section">
+                            <option value="">Semua Section</option>
+                        </select>
+                    </div>
+                </th>
+                <th>Pertanyaan</th>
+                <th>Jawaban</th>
+                <th class="sv-answers-th-actions">
+                    <div class="sv-table-nav" id="answersNav">
+                        <button type="button" class="sv-table-nav__btn" id="btnAnswersPrev" title="Halaman sebelumnya">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <span class="sv-table-nav__label">
+                            Hal <input type="number" class="sv-table-nav__input" id="answersNavInput" min="1" value="1" />
+                            dari <span id="answersNavTotal">1</span>
+                        </span>
+                        <button type="button" class="sv-table-nav__btn" id="btnAnswersNext" title="Halaman selanjutnya">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </th>
+            </tr>
+        </thead>
         <tbody id="answersTbody">
-            @foreach (var a in Model.SurveyAnswers.OrderBy(a => a.Question.OrderNo))
+            @foreach (var a in Model.SurveyAnswers.OrderBy(a => a.Question.Section.OrderNo).ThenBy(a => a.Question.OrderNo))
             {
-                <tr>
+                <tr data-section="@a.Question?.Section?.SectionTitle">
                     <td>@a.Question?.Section?.SectionTitle</td>
                     <td>@a.Question?.QuestionText</td>
                     <td>@(a.ValueText ?? a.ValueNumber?.ToString() ?? a.ValueDate?.ToString() ?? a.ValueBoolean?.ToString() ?? "-")</td>
-                    <td class="text-nowrap">
+                    <td class="text-nowrap text-end">
                         <a asp-action="EditAnswer" asp-route-id="@a.Id" class="sv-btn sv-btn--ghost sv-btn--sm">Edit</a>
                         <form asp-action="DeleteAnswer" method="post" style="display:inline" onsubmit="return confirm('Hapus jawaban ini?');">
                             <input type="hidden" name="id" value="@a.Id" />
@@ -167,24 +190,11 @@
             }
         </tbody>
     </table>
-    </div>
 </div>
 
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    function positionHeaderBar() {
-        var infoCard = document.getElementById('svResponseInfo');
-        var headerBar = document.getElementById('answersHeaderBar');
-        if (!infoCard || !headerBar) return;
-
-        var topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 64;
-        headerBar.style.top = (topbarH + infoCard.offsetHeight) + 'px';
-    }
-
-    positionHeaderBar();
-    window.addEventListener('resize', positionHeaderBar);
-
     initAnswersPager({ tbodyId: 'answersTbody', pageSize: 10 });
 });
 
@@ -193,8 +203,9 @@ function initAnswersPager(opts) {
     var tbody = document.getElementById(opts.tbodyId);
     if (!tbody) return;
 
-    var rows = Array.from(tbody.querySelectorAll('tr'));
-    var totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+    var allRows = Array.from(tbody.querySelectorAll('tr'));
+    var filteredRows = allRows.slice();
+    var totalPages = 1;
     var current = 1;
 
     var nav = document.getElementById('answersNav');
@@ -202,24 +213,67 @@ function initAnswersPager(opts) {
     var btnNext = document.getElementById('btnAnswersNext');
     var input = document.getElementById('answersNavInput');
     var totalLabel = document.getElementById('answersNavTotal');
+    var sectionFilter = document.getElementById('answersSectionFilter');
 
     if (!nav || !btnPrev || !btnNext || !input || !totalLabel) return;
 
-    if (rows.length <= pageSize) {
-        nav.style.display = 'none';
+    function populateSectionFilter() {
+        if (!sectionFilter) return;
+        var seen = {};
+        var sections = [];
+        allRows.forEach(function (row) {
+            var name = row.dataset.section || '';
+            if (name && !seen[name]) {
+                seen[name] = true;
+                sections.push(name);
+            }
+        });
+        sections.sort(function (a, b) { return a.localeCompare(b, 'id'); });
+
+        sections.forEach(function (name) {
+            var opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sectionFilter.appendChild(opt);
+        });
     }
 
-    input.max = totalPages;
-    totalLabel.textContent = totalPages;
+    function applyFilter() {
+        var val = sectionFilter ? sectionFilter.value : '';
+
+        allRows.forEach(function (row) {
+            var matches = !val || row.dataset.section === val;
+            row.classList.toggle('sv-row-filtered-out', !matches);
+        });
+
+        filteredRows = allRows.filter(function (row) {
+            return !row.classList.contains('sv-row-filtered-out');
+        });
+
+        totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+        current = 1;
+        input.max = totalPages;
+        totalLabel.textContent = totalPages;
+
+        render();
+    }
 
     function render() {
-        rows.forEach(function (row, idx) {
-            var page = Math.floor(idx / pageSize) + 1;
+        var visibleIndex = 0;
+        allRows.forEach(function (row) {
+            if (row.classList.contains('sv-row-filtered-out')) {
+                row.style.display = 'none';
+                return;
+            }
+            var page = Math.floor(visibleIndex / pageSize) + 1;
             row.style.display = page === current ? '' : 'none';
+            visibleIndex++;
         });
+
         input.value = current;
         btnPrev.disabled = current === 1;
         btnNext.disabled = current === totalPages;
+        nav.style.display = filteredRows.length <= pageSize ? 'none' : '';
     }
 
     function goTo(page) {
@@ -241,6 +295,11 @@ function initAnswersPager(opts) {
         goTo(parseInt(input.value, 10) || 1);
     });
 
-    render();
+    if (sectionFilter) {
+        populateSectionFilter();
+        sectionFilter.addEventListener('change', applyFilter);
+    }
+
+    applyFilter();
 }
 </script>

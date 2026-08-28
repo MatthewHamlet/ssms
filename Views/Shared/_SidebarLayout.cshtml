@@ -187,6 +187,7 @@ table.sv-table tr:hover td{background:#fafbfc;}
     <div class="sf-section">Menu</div>
     <a class="sf-item @(IsActive("home") ? "active" : "")" asp-controller="Home" asp-action="Index"><i class="bi bi-house-fill"></i><span class="sf-label">Beranda</span></a>
     <a class="sf-item @(IsActive("surveyindex") ? "active" : "")" asp-controller="Survey" asp-action="Index"><i class="bi bi-grid-fill"></i><span class="sf-label">Daftar Form</span></a>
+    <a class="sf-item @(IsActive("assignment") ? "active" : "")" asp-controller="Assignment" asp-action="Index"><i class="bi bi-person-check-fill"></i><span class="sf-label">Assign Survey</span></a>
     <a class="sf-item @(IsActive("formbuilder") ? "active" : "")" asp-controller="FormBuilder" asp-action="Index"><i class="bi bi-tools"></i><span class="sf-label">Form Builder</span></a>
     <a class="sf-item @(IsActive("responses") ? "active" : "")" asp-controller="Survey" asp-action="Responses"><i class="bi bi-clipboard-data-fill"></i><span class="sf-label">Daftar Jawaban</span></a>
     <div class="sf-section">Lainnya</div>
