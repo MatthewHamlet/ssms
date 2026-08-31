@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SurveyFormApp.Models;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using SurveyFormApp.Services;
 
 namespace SurveyFormApp.Controllers;
 
@@ -151,24 +152,41 @@ public class SurveyController : Controller
         var version = assignment.FormVersion;
         var allQuestions = version.SurveySections.SelectMany(s => s.SurveyQuestions).ToList();
 
-        // ===== 2. Validasi server-side: field wajib (menghormati rule show/hide) =====
+        // ===== 2. Validasi server-side: field wajib + tipe/format jawaban (menghormati rule show/hide) =====
         var errors = new List<string>();
+        var validatedNumbers = new Dictionary<long, decimal?>();
+        var validatedDates = new Dictionary<long, DateTime?>();
+        var validatedBooleans = new Dictionary<long, bool?>();
+        var validatedTexts = new Dictionary<long, string?>();
 
         foreach (var q in allQuestions)
         {
-            if (!q.IsRequired) continue;
             if (IsQuestionHiddenByRules(q, answers)) continue; // lagi disembunyikan rule, skip validasi
 
             if ((q.QuestionType ?? "").ToLower() == "photo")
             {
-                if (!photos.TryGetValue(q.Id, out var pf) || pf == null || pf.Length == 0)
+                if (q.IsRequired && (!photos.TryGetValue(q.Id, out var pf) || pf == null || pf.Length == 0))
                     errors.Add($"'{q.QuestionText}' wajib diisi (upload foto).");
+                continue;
             }
-            else
+
+            answers.TryGetValue(q.Id, out var rawValue);
+
+            var ok = SurveyAnswerValidator.TryValidate(
+                q, rawValue,
+                out var numVal, out var dateVal, out var boolVal, out var textVal,
+                out var error);
+
+            if (!ok)
             {
-                if (!answers.TryGetValue(q.Id, out var val) || string.IsNullOrWhiteSpace(val))
-                    errors.Add($"'{q.QuestionText}' wajib diisi.");
+                errors.Add(error!);
+                continue;
             }
+
+            validatedNumbers[q.Id] = numVal;
+            validatedDates[q.Id] = dateVal;
+            validatedBooleans[q.Id] = boolVal;
+            validatedTexts[q.Id] = textVal;
         }
 
         // ===== 3. Validasi file foto (ekstensi, mime type, ukuran) =====
@@ -218,40 +236,26 @@ public class SurveyController : Controller
         _context.SurveyResponses.Add(response);
         await _context.SaveChangesAsync();
 
-        var questionTypes = allQuestions.ToDictionary(q => q.Id, q => (q.QuestionType ?? "text").ToLower());
-
-        foreach (var kv in answers)
+        foreach (var q in allQuestions)
         {
-            if (string.IsNullOrWhiteSpace(kv.Value)) continue;
+            if ((q.QuestionType ?? "").ToLower() == "photo") continue; // ditangani terpisah di attachment
 
-            var answer = new SurveyAnswer
+            var hasNumber = validatedNumbers.TryGetValue(q.Id, out var nv) && nv.HasValue;
+            var hasDate = validatedDates.TryGetValue(q.Id, out var dv) && dv.HasValue;
+            var hasBool = validatedBooleans.TryGetValue(q.Id, out var bv) && bv.HasValue;
+            var hasText = validatedTexts.TryGetValue(q.Id, out var tv) && !string.IsNullOrEmpty(tv);
+
+            if (!hasNumber && !hasDate && !hasBool && !hasText) continue; // kosong & optional, gak usah disimpan
+
+            _context.SurveyAnswers.Add(new SurveyAnswer
             {
                 ResponseId = response.Id,
-                QuestionId = kv.Key
-            };
-
-            var type = questionTypes.TryGetValue(kv.Key, out var t) ? t : "text";
-
-            switch (type)
-            {
-                case "number":
-                    if (decimal.TryParse(kv.Value, out var numVal)) answer.ValueNumber = numVal;
-                    else answer.ValueText = kv.Value;
-                    break;
-                case "date":
-                    if (DateTime.TryParse(kv.Value, out var dateVal)) answer.ValueDate = dateVal;
-                    else answer.ValueText = kv.Value;
-                    break;
-                case "boolean":
-                    if (bool.TryParse(kv.Value, out var boolVal)) answer.ValueBoolean = boolVal;
-                    else answer.ValueText = kv.Value;
-                    break;
-                default:
-                    answer.ValueText = kv.Value;
-                    break;
-            }
-
-            _context.SurveyAnswers.Add(answer);
+                QuestionId = q.Id,
+                ValueNumber = hasNumber ? nv : null,
+                ValueDate = hasDate ? dv : null,
+                ValueBoolean = hasBool ? bv : null,
+                ValueText = hasText ? tv : null
+            });
         }
 
         if (photos.Count > 0)
@@ -441,26 +445,44 @@ public class SurveyController : Controller
     // POST: /Survey/EditAnswer
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditAnswer(long id, string? valueText, decimal? valueNumber, DateTime? valueDate, bool? valueBoolean)
+    public async Task<IActionResult> EditAnswer(long id, string? valueText, string? valueNumber, string? valueDate, string? valueBoolean)
     {
         var answer = await _context.SurveyAnswers
             .Include(a => a.Question)
+                .ThenInclude(q => q.SurveyQuestionOptions)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (answer == null) return NotFound();
 
-        var type = answer.Question.QuestionType?.ToLower();
+        var type = (answer.Question.QuestionType ?? "text").ToLower();
 
-        switch (type)
+        string? rawValue = type switch
         {
-            case "number": answer.ValueNumber = valueNumber; break;
-            case "date": answer.ValueDate = valueDate; break;
-            case "boolean": answer.ValueBoolean = valueBoolean; break;
-            default: answer.ValueText = valueText; break;
+            "number" => valueNumber,
+            "date" => valueDate,
+            "boolean" => valueBoolean,
+            _ => valueText
+        };
+
+        var ok = SurveyAnswerValidator.TryValidate(
+            answer.Question, rawValue,
+            out var numVal, out var dateVal, out var boolVal, out var textVal,
+            out var error);
+
+        if (!ok)
+        {
+            TempData["Error"] = error;
+            return RedirectToAction(nameof(EditAnswer), new { id });
         }
+
+        answer.ValueNumber = numVal;
+        answer.ValueDate = dateVal;
+        answer.ValueBoolean = boolVal;
+        answer.ValueText = textVal;
 
         await _context.SaveChangesAsync();
 
+        TempData["Success"] = "Jawaban berhasil diperbarui.";
         return RedirectToAction("ResponseDetail", new { id = answer.ResponseId });
     }
 
